@@ -8,6 +8,7 @@ sigma = np.random.uniform(0.5, 1.5, 2)      #aralikta olan, random iki SIGMA'dan
 size = 10000
 
 #rastgele 10000 sayidan olusan, mu ve sigmasi farkli olan iki ayri dizi yaratiyoruz
+#bu dizilerdeki her sayiyi kendisine en yakin tam sayiya yuvarliyoruz
 a = np.around(np.random.normal(mu[0], sigma[0], size))
 b = np.around(np.random.normal(mu[1], sigma[1], size))
 
@@ -23,9 +24,10 @@ for i in range(0, 10000):
 
 #olusturdugumuz iki histogrami da normalize ediyoruz.
 hist_a_normalized = np.divide(hist_a, sum(hist_a)*1.)
-plt.hist(hist_a_normalized, bins=range(-20, 20))
 hist_b_normalized = np.divide(hist_b, sum(hist_b)*1.)
-plt.hist(hist_b_normalized, bins=range(-20, 20))
 
 #olusturdugumuz histogramlari goruntuluyoruz
+plt.axis((-20, 20, 0, 1))
+plt.bar(range(-20, 21), hist_a_normalized, color='red')
+plt.bar(range(-20, 21), hist_b_normalized, color='blue')
 plt.show()
