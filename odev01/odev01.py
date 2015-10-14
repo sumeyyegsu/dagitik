@@ -15,8 +15,8 @@ b = np.around(np.random.normal(mu[1], sigma[1], size))
 hist_a, hist_b = ([0] * 41), ([0] * 41)     #41 tane sifirdan olusan iki ayri histogram dizisi yaratiyoruz
 
 #a ve b dizilerinin ayri ayri histogramlarini olusturuyoruz
-for i in range(0, 10000):
-    for j in range(-20, 20):
+for i in range(0, size):
+    for j in range(-20, 21):
         if j == a[i]:
             hist_a[j+20] += 1
         if j == b[i]:
