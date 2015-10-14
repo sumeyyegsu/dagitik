@@ -19,6 +19,7 @@ for i in range(0, size):
     for j in range(-20, 21):
         if j == a[i]:
             hist_a[j+20] += 1
+            continue
         if j == b[i]:
             hist_b[j+20] += 1
 
@@ -26,8 +27,34 @@ for i in range(0, size):
 hist_a_normalized = np.divide(hist_a, float(sum(hist_a)))
 hist_b_normalized = np.divide(hist_b, float(sum(hist_b)))
 
-#olusturdugumuz histogramlari goruntuluyoruz
+#olusturdugumuz normalize edilmis histogramlari goruntuluyoruz
 plt.axis((-20, 20, 0, 1))
 plt.bar(range(-20, 21), hist_a_normalized, color='red')
 plt.bar(range(-20, 21), hist_b_normalized, color='blue')
 plt.show()
+
+#histogramlar arasindaki mesafeyi hesapliyoruz
+i, j, result = 0, 0, 0
+while i <= 40 and j <= 40:
+    if hist_a_normalized[i] == 0:
+        i += 1
+        continue
+    if hist_b_normalized[j] == 0:
+        j += 1
+        continue
+    if hist_a_normalized[i] > hist_b_normalized[j]:
+        result += abs(i-j) * float(hist_b_normalized[j])
+        hist_a_normalized[i] -= hist_b_normalized[j]
+        hist_b_normalized[j] = 0
+        continue
+    if hist_a_normalized[i] < hist_b_normalized[j]:
+        result += abs(i-j) * float(hist_a_normalized[i])
+        hist_b_normalized[j] -= hist_a_normalized[i]
+        hist_a_normalized[i] = 0
+        continue
+    if hist_a_normalized[i] == hist_b_normalized[j]:
+        hist_a_normalized[i] = 0
+        hist_b_normalized[j] = 0
+        continue
+
+print 'Histogramlar arasindaki mesafe: ', result
