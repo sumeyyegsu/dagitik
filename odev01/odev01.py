@@ -23,8 +23,8 @@ for i in range(0, 10000):
             hist_b[j+20] += 1
 
 #olusturdugumuz iki histogrami da normalize ediyoruz.
-hist_a_normalized = np.divide(hist_a, sum(hist_a)*1.)
-hist_b_normalized = np.divide(hist_b, sum(hist_b)*1.)
+hist_a_normalized = np.divide(hist_a, float(sum(hist_a)))
+hist_b_normalized = np.divide(hist_b, float(sum(hist_b)))
 
 #olusturdugumuz histogramlari goruntuluyoruz
 plt.axis((-20, 20, 0, 1))
