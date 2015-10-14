@@ -53,8 +53,7 @@ while i <= 40 and j <= 40:
         hist_a_normalized[i] = 0
         continue
     if hist_a_normalized[i] == hist_b_normalized[j]:
-        hist_a_normalized[i] = 0
-        hist_b_normalized[j] = 0
+        hist_a_normalized[i] = hist_b_normalized[j] = 0
         continue
 
 print 'Histogramlar arasindaki mesafe: ', result
