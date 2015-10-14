@@ -53,6 +53,7 @@ while i <= 40 and j <= 40:
         hist_a_normalized[i] = 0
         continue
     if hist_a_normalized[i] == hist_b_normalized[j]:
+        result += abs(i-j) * float(hist_a_normalized[i])
         hist_a_normalized[i] = hist_b_normalized[j] = 0
         continue
 
