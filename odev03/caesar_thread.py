@@ -2,10 +2,12 @@ __author__ = 'sumeyye'
 
 import time
 from threading import Thread
+import Queue
 
 #
 j = 0
 threads = []            # thread listesi icin degisken tanimiyoruz
+queue = Queue.Queue()
 
 # s, n ve l'i kullanicidan alma
 s = int(input("Kaydirma miktarini girin: "))
@@ -35,6 +37,7 @@ def threadWork(j, i, s, l):
             else:                               # eger karakter alfabede yer almiyorsa
                 crypted_text += character
     print "crypted_text: ", crypted_text
+    queue.put(crypted_text)
 
 
 #istenen sayida(n) thread'i yaratip gerekli islemleri yaptigimiz dongu
@@ -50,5 +53,6 @@ for t in threads:
 
 # crypted metni yazdirma
 crypted_file = open('crypted.txt', 'w')
-crypted_file.write(crypted_text.upper())
+while not queue.empty():
+    crypted_file.write(queue.get().upper())
 crypted_file.close()
