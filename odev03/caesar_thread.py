@@ -38,7 +38,10 @@ def threadWork(j, i, s, l):
 
 
 for i in range(n):
-    t = Thread(target=threadWork, args=(j, i, s, l))
+    try:
+        t = Thread(target=threadWork, args=(j, i, s, l))
+    except:
+        print ("Error: unable to start thread")
     t.start()
     j += l
     if(j > len(metin_text)):
