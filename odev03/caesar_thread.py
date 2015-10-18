@@ -5,7 +5,6 @@ from threading import Thread
 
 #
 j = 0
-fin = None
 
 # s, n ve l'i kullanicidan alma
 s = int(input("Kaydirma miktarini girin: "))
@@ -37,18 +36,18 @@ def threadWork(j, i, s, l):
     print "crypted_text: ", crypted_text
 
 
+#istenen sayida(n) thread'i yaratip gerekli islemleri yaptigimiz dongu
 for i in range(n):
-    try:
-        t = Thread(target=threadWork, args=(j, i, s, l))
-    except:
-        print ("Error: unable to start thread")
-    t.start()
+    t = Thread(target=threadWork, args=(j, i, s, l))    # yeni bir thread yaratma
+    t.start()                                           # thread'i baslatma/run etme
+    threads.append(t)                                   # thread'i threads listesine ekleme
     j += l
-    if(j > len(metin_text)):
-        fin = True
+    
+# tum threadlerin bitmesini bekleme
+for t in threads:
+    t.join
 
-if fin == True:
-    # crypted metni yazdirma
-    crypted_file = open('crypted.txt', 'w')
-    crypted_file.write(crypted_text.upper())
-    crypted_file.close()
+# crypted metni yazdirma
+crypted_file = open('crypted.txt', 'w')
+crypted_file.write(crypted_text.upper())
+crypted_file.close()
