@@ -5,6 +5,7 @@ from threading import Thread
 
 #
 j = 0
+threads = []            # thread listesi icin degisken tanimiyoruz
 
 # s, n ve l'i kullanicidan alma
 s = int(input("Kaydirma miktarini girin: "))
