@@ -4,18 +4,16 @@ import time
 from threading import Thread
 import Queue
 
-#
-j = 0
-threads = []            # thread listesi icin degisken tanimiyoruz
-workQueue = Queue.Queue()
 exitFlag = 0
 threadList = []
-readList = Queue.Queue()
-writeList = Queue.Queue()
-cryptedNameList = []
-queueLock = threading.Lock()
+threads = []
 threadID = 1
-alfabe = "abcdefghijklmnopqrstuvwxyz"     # 26 harften olusan alfabeyi tanimlama
+readQueue = Queue.Queue()
+writeQueue = Queue.Queue()
+queueLock = threading.Lock()
+workQueue = Queue.Queue()
+
+alfabe = "abcdefghijklmnopqrstuvwxyz"  
 string_lenght = 0
 count = 0
 
@@ -35,12 +33,49 @@ class myThread (threading.Thread):
         process_data(self.name, self.q)
         print "Exiting " + self.name
         
-# metni okuma
-metin_file = open('metin.txt', 'r')
-metin_text = metin_file.read().lower()
-metin_file.close()
+# ---------------------------------------------READING-------------------------------------------------------------
+def reading(threadName):
+    original_file = open('metin.txt', 'r')
+    original_string = original_file.read()
+    j = 0
+#    print threadName + " rList.qsize: "+str(readList.qsize()) + "- wList.qsize: "+str(writeList.qsize())
+    while j < len(original_string):
+        print threadName + " IS READING: " + original_string[j:j+l]
+        readQueue.put(original_string[j:j+l])
+        j += l
+    original_file.close()
+    return len(original_string)
+# -----------------------------------------------------------------------------------------------------------------
+# --------------------------------------------ENCRYPTING-----------------------------------------------------------
+def encrypting(threadName):
+    data = readQueue.get()
+    crypted_data = ""
+                                            # sifreleme dongusu
+    for character in data:                  # metindeki her karakter icin
+        if character in alfabe:             # eger karakter alfabede yer aliyorsa
+            a = ord(character) - s          # karakterin alfabedeki sirasi + shift
+            if a < ord('a'):
+                a += 26
+            crypted_data += chr(a)
+        else:                               # eger karakter alfabede yer almiyorsa
+            crypted_data += character
+#    print threadName + " rList.qsize: "+str(readList.qsize()) + "- wList.qsize: "+str(writeList.qsize())
+    print threadName + " IS ENCRYPTING:  " + data + "----" + threadName + "---->" + crypted_data
+    writeQueue.put(crypted_data)
 
-def threadWork(j, i, s, l):
+# -----------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------WRITING---------------------------------------------------------
+def writing (threadName):
+    crypted_file = open('crypted.txt', 'w')
+    while not writeQueue.empty():
+        s = writeQueue.get().upper()
+        print threadName + " IS WRITING: " + s
+        crypted_file.write(s)
+    crypted_file.close()
+# -----------------------------------------------------------------------------------------------------------------
+
+
+def process_data(threadName, q):
     print "thread %d" % i
     alphabet = "abcdefghijklmnopqrstuvwxyz"     # 26 harften olusan alfabeyi tanimlama
     crypted_text = ""                           # kripte edilmis metin icin bos bir string tanimiyoruz
