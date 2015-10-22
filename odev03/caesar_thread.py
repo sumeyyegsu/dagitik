@@ -80,7 +80,7 @@ def writing (threadName):
 # -----------------------------------------------------------------------------------------------------------------
 
 
-def process_data(threadName, q):
+def process_data(threadName):
     while not exitFlag:
         global string_lenght
         global count
