@@ -7,7 +7,17 @@ import Queue
 #
 j = 0
 threads = []            # thread listesi icin degisken tanimiyoruz
-queue = Queue.Queue()
+workQueue = Queue.Queue()
+exitFlag = 0
+threadList = []
+readList = Queue.Queue()
+writeList = Queue.Queue()
+cryptedNameList = []
+queueLock = threading.Lock()
+threadID = 1
+alfabe = "abcdefghijklmnopqrstuvwxyz"     # 26 harften olusan alfabeyi tanimlama
+string_lenght = 0
+count = 0
 
 # s, n ve l'i kullanicidan alma
 s = int(input("Kaydirma miktarini girin: "))
@@ -38,14 +48,34 @@ def threadWork(j, i, s, l):
                 crypted_text += character
     print "crypted_text: ", crypted_text
     queue.put(crypted_text)
-
-
-#istenen sayida(n) thread'i yaratip gerekli islemleri yaptigimiz dongu
+    
+# Create a tread list
 for i in range(n):
-    t = Thread(target=threadWork, args=(j, i, s, l))    # yeni bir thread yaratma
-    t.start()                                           # thread'i baslatma/run etme
-    threads.append(t)                                   # thread'i threads listesine ekleme
-    j += l
+    threadList.append('Thread-' + str(i+1))
+threadList.append('Thread-read')
+threadList.append('Thread-write')
+
+# Create new threads
+for tName in threadList:
+    thread = myThread(threadID, tName,, workQueue)      # yeni bir thread yaratma
+    thread.start()                                           # thread'i baslatma/run etme
+    threads.append(thread)                                   # thread'i threads listesine ekleme
+    threadID += 1
+
+    
+# Fill the queue        # write ve read threadleri rezerve oldugunda buraya atmiyoruz!!!
+queueLock.acquire()
+for i in range(n):
+    workQueue.put(i+1)
+queueLock.release()
+
+
+# Wait for queue to empty
+while not workQueue.empty():
+    pass
+
+# Notify threads it's time to exit
+exitFlag = 1
     
 # tum threadlerin bitmesini bekleme
 for t in threads:
