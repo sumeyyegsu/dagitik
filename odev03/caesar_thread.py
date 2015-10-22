@@ -11,30 +11,29 @@ threadID = 1
 readQueue = Queue.Queue()
 writeQueue = Queue.Queue()
 queueLock = threading.Lock()
-workQueue = Queue.Queue()
 
 alfabe = "abcdefghijklmnopqrstuvwxyz"  
 string_lenght = 0
 count = 0
 
 # s, n ve l'i kullanicidan alma
-s = int(input("Kaydirma miktarini girin: "))
-n = int(input("Thread sayisini girin: "))
-l = int(input("Blok uzunlugunu girin: "))
+s = int(input("Kaydirma miktarini girin(s): "))
+n = int(input("Thread sayisini girin(n): "))
+l = int(input("Blok uzunlugunu girin(l): "))
 
 class myThread (threading.Thread):
-    def __init__(self, threadID, name, q):
+    def __init__(self, threadID, name):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
-        self.q = q
     def run(self):
         print "Starting " + self.name
-        process_data(self.name, self.q)
+        process_data(self.name)
         print "Exiting " + self.name
         
 # ---------------------------------------------READING-------------------------------------------------------------
 def reading(threadName):
+    queueLock.acquire()
     original_file = open('metin.txt', 'r')
     original_string = original_file.read()
     j = 0
@@ -44,10 +43,12 @@ def reading(threadName):
         readQueue.put(original_string[j:j+l])
         j += l
     original_file.close()
+    queueLock.release()
     return len(original_string)
 # -----------------------------------------------------------------------------------------------------------------
 # --------------------------------------------ENCRYPTING-----------------------------------------------------------
 def encrypting(threadName):
+    queueLock.acquire()
     data = readQueue.get()
     crypted_data = ""
                                             # sifreleme dongusu
@@ -62,16 +63,20 @@ def encrypting(threadName):
 #    print threadName + " rList.qsize: "+str(readList.qsize()) + "- wList.qsize: "+str(writeList.qsize())
     print threadName + " IS ENCRYPTING:  " + data + "----" + threadName + "---->" + crypted_data
     writeQueue.put(crypted_data)
+    queueLock.release()
 
 # -----------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------WRITING---------------------------------------------------------
 def writing (threadName):
+    queueLock.acquire()
+#    crypted_file = open('crypted_'+str(s)+'_'+str(n)+'_'+str(l)+'.txt', 'a+')
     crypted_file = open('crypted.txt', 'w')
     while not writeQueue.empty():
-        s = writeQueue.get().upper()
-        print threadName + " IS WRITING: " + s
-        crypted_file.write(s)
+        blok = writeQueue.get().upper()
+        print threadName + " IS WRITING: " + blok
+        crypted_file.write(blok)
     crypted_file.close()
+    queueLock.release()
 # -----------------------------------------------------------------------------------------------------------------
 
 
@@ -79,53 +84,34 @@ def process_data(threadName, q):
     while not exitFlag:
         global string_lenght
         global count
-        queueLock.acquire()
         # okuma listesi bossa ve okuma thread'i geldiyse oku
         if (readQueue.empty()) and (threadName == 'Thread-read'):
             if (readQueue.qsize() != int(string_lenght / l) + 1) and (writeQueue.qsize() != int(string_lenght / l) + 1):
                 string_lenght = reading(threadName)
                 count = int(string_lenght / l) + 1
-            queueLock.release()                             # kilidi ac
+        elif (readQueue.qsize() > 0) and (count > 0) and (writeQueue.qsize() != int(string_lenght / l) + 1):
+            if (threadName != 'Thread-read') and (threadName != 'Thread-write'):
+                encrypting(threadName)
+                count -= 1
+        elif threadName == 'Thread-write':
+            writing(threadName)
         else:
-#            print "readList.qsize: " + str(readList.qsize())
-            if (readQueue.qsize() > 0) and (count > 0) and (writeQueue.qsize() != int(string_lenght / l) + 1):
-                if (threadName != 'Thread-read') and (threadName != 'Thread-write'):
-                    encrypting(threadName)
-                    count -= 1
-                queueLock.release()
-            elif (threadName == 'Thread-write'):
-                writing(threadName)
-                queueLock.release()
-            else:
-                queueLock.release()                     # kilidi ac
-                time.sleep(0.5)
-
+            time.sleep(1)
 
     
 # Create a tread list
-for i in range(n):
-    threadList.append('Thread-' + str(i+1))
 threadList.append('Thread-read')
 threadList.append('Thread-write')
+for i in range(n):
+    threadList.append('Thread-' + str(i+1))
 
 # Create new threads
 for tName in threadList:
-    thread = myThread(threadID, tName,, workQueue)      # yeni bir thread yaratma
-    thread.start()                                           # thread'i baslatma/run etme
-    threads.append(thread)                                   # thread'i threads listesine ekleme
+    thread = myThread(threadID, tName)              
+    thread.start()                                           
+    threads.append(thread)                              
     threadID += 1
 
-    
-# Fill the queue        # write ve read threadleri rezerve oldugunda buraya atmiyoruz!!!
-queueLock.acquire()
-for i in range(n):
-    workQueue.put(i+1)
-queueLock.release()
-
-
-# Wait for queue to empty
-while not workQueue.empty():
-    pass
 
 # Notify threads it's time to exit
 exitFlag = 1
