@@ -76,7 +76,31 @@ def writing (threadName):
 
 
 def process_data(threadName, q):
-    ''' fonksiyonlar cagirilacak '''
+    while not exitFlag:
+        global string_lenght
+        global count
+        queueLock.acquire()
+        # okuma listesi bossa ve okuma thread'i geldiyse oku
+        if (readQueue.empty()) and (threadName == 'Thread-read'):
+            if (readQueue.qsize() != int(string_lenght / l) + 1) and (writeQueue.qsize() != int(string_lenght / l) + 1):
+                string_lenght = reading(threadName)
+                count = int(string_lenght / l) + 1
+            queueLock.release()                             # kilidi ac
+        else:
+#            print "readList.qsize: " + str(readList.qsize())
+            if (readQueue.qsize() > 0) and (count > 0) and (writeQueue.qsize() != int(string_lenght / l) + 1):
+                if (threadName != 'Thread-read') and (threadName != 'Thread-write'):
+                    encrypting(threadName)
+                    count -= 1
+                queueLock.release()
+            elif (threadName == 'Thread-write'):
+                writing(threadName)
+                queueLock.release()
+            else:
+                queueLock.release()                     # kilidi ac
+                time.sleep(0.5)
+
+
     
 # Create a tread list
 for i in range(n):
@@ -109,9 +133,5 @@ exitFlag = 1
 # tum threadlerin bitmesini bekleme
 for t in threads:
     t.join
-
-# crypted metni yazdirma
-crypted_file = open('crypted.txt', 'w')
-while not queue.empty():
-    crypted_file.write(queue.get().upper())
-crypted_file.close()
+    
+print "Exiting Main Thread"
