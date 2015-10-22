@@ -1,7 +1,7 @@
 __author__ = 'sumeyye'
 
 import time
-from threading import Thread
+import threading
 import Queue
 
 exitFlag = 0
