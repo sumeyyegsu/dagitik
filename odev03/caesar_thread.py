@@ -5,6 +5,15 @@ import threading
 import Queue
 
 exitFlag = 0
+stopReadFlag = 0
+stopWriteFlag = 0
+stopEncryptFlag = 0
+counterOfQueues = 0
+readCount = 0
+encryptCount = 0
+writeCount = 0
+blockNum = 0
+
 threadList = []
 threads = []
 threadID = 1
@@ -12,9 +21,7 @@ readQueue = Queue.Queue()
 writeQueue = Queue.Queue()
 queueLock = threading.Lock()
 
-alfabe = "abcdefghijklmnopqrstuvwxyz"  
-string_lenght = 0
-count = 0
+alphabet = "abcdefghijklmnopqrstuvwxyz"  
 
 # s, n ve l'i kullanicidan alma
 s = int(input("Kaydirma miktarini girin(s): "))
@@ -30,74 +37,83 @@ class myThread (threading.Thread):
         print "Starting " + self.name
         process_data(self.name)
         print "Exiting " + self.name
-        
 # ---------------------------------------------READING-------------------------------------------------------------
 def reading(threadName):
     queueLock.acquire()
-    original_file = open('metin.txt', 'r')
-    original_string = original_file.read()
+    originalFile = open('metin.txt', 'r')
+    originalString = originalFile.read()
     j = 0
-#    print threadName + " rList.qsize: "+str(readList.qsize()) + "- wList.qsize: "+str(writeList.qsize())
-    while j < len(original_string):
+    while j < len(originalString):
         print threadName + " IS READING: " + original_string[j:j+l]
         readQueue.put(original_string[j:j+l])
         j += l
-    original_file.close()
+    originalFile.close()
     queueLock.release()
-    return len(original_string)
+    return int(len(originalString) / l) + 1
 # -----------------------------------------------------------------------------------------------------------------
 # --------------------------------------------ENCRYPTING-----------------------------------------------------------
 def encrypting(threadName):
     queueLock.acquire()
-    data = readQueue.get()
-    crypted_data = ""
+    currentPart = readQueue.get()
+    cryptedData = ''
                                             # sifreleme dongusu
-    for character in data:                  # metindeki her karakter icin
-        if character in alfabe:             # eger karakter alfabede yer aliyorsa
+    for character in currentPart:           # metindeki her karakter icin
+        if character in alphabet:           # eger karakter alfabede yer aliyorsa
             a = ord(character) - s          # karakterin alfabedeki sirasi + shift
             if a < ord('a'):
                 a += 26
-            crypted_data += chr(a)
+            cryptedData += chr(a)
         else:                               # eger karakter alfabede yer almiyorsa
-            crypted_data += character
-#    print threadName + " rList.qsize: "+str(readList.qsize()) + "- wList.qsize: "+str(writeList.qsize())
+            cryptedData += character
     print threadName + " IS ENCRYPTING:  " + data + "----" + threadName + "---->" + crypted_data
-    writeQueue.put(crypted_data)
+    writeQueue.put(cryptedData)
     queueLock.release()
 
 # -----------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------WRITING---------------------------------------------------------
 def writing (threadName):
     queueLock.acquire()
-#    crypted_file = open('crypted_'+str(s)+'_'+str(n)+'_'+str(l)+'.txt', 'a+')
-    crypted_file = open('crypted.txt', 'w')
+    cryptedFile = open('crypted_'+str(s)+'_'+str(n)+'_'+str(l)+'.txt', 'a+')
     while not writeQueue.empty():
-        blok = writeQueue.get().upper()
-        print threadName + " IS WRITING: " + blok
-        crypted_file.write(blok)
-    crypted_file.close()
+        currentPart = writeQueue.get().upper()
+        print threadName + " IS WRITING: " + currentPart
+        cryptedFile.write(currentPart)
+    cryptedFile.close()
     queueLock.release()
 # -----------------------------------------------------------------------------------------------------------------
 
-
 def process_data(threadName):
+    global exitFlag
     while not exitFlag:
-        global string_lenght
-        global count
-        # okuma listesi bossa ve okuma thread'i geldiyse oku
-        if (readQueue.empty()) and (threadName == 'Thread-read'):
-            if (readQueue.qsize() != int(string_lenght / l) + 1) and (writeQueue.qsize() != int(string_lenght / l) + 1):
-                string_lenght = reading(threadName)
-                count = int(string_lenght / l) + 1
-        elif (readQueue.qsize() > 0) and (count > 0) and (writeQueue.qsize() != int(string_lenght / l) + 1):
-            if (threadName != 'Thread-read') and (threadName != 'Thread-write'):
-                encrypting(threadName)
-                count -= 1
-        elif threadName == 'Thread-write':
+        global blockNum
+        global readCount, encryptCount, writeCount
+        global stopReadFlag, stopEncryptFlag, stopWriteFlag
+
+        # ----- METIN'DEN OKUMA KONDISYONU ------
+        if blockNum == 0 and stopReadFlag == 0 and threadName == 'Thread-read':
+            blockNum = reading(threadName)
+            readCount += 1
+            if readCount >= blockNum:
+                stopReadFlag = 1
+
+        # ----- OKUNANI SIFRELEME KONDISYONU -----
+        elif readCount > 0 and stopEncryptFlag == 0 and threadName != 'Thread-read' and threadName != 'Thread-write':
+            encrypting(threadName)
+            encryptCount += 1
+            if encryptCount >= blockNum:
+                stopEncryptFlag = 1
+
+        # ----- SIFRELENENI CRYPTED'A YAZMA KONDISYONU -----
+        elif encryptCount > 0 and stopWriteFlag == 0 and threadName == 'Thread-write':
             writing(threadName)
+            writeCount += 1
+            if writeCount >= blockNum:
+                stopWriteFlag = 1
+                exitFlag = 1
+                exit(threads)
+
         else:
             time.sleep(1)
-
     
 # Create a tread list
 threadList.append('Thread-read')
@@ -112,12 +128,8 @@ for tName in threadList:
     threads.append(thread)                              
     threadID += 1
 
-
-# Notify threads it's time to exit
-exitFlag = 1
-    
 # tum threadlerin bitmesini bekleme
 for t in threads:
     t.join
     
-print "Exiting Main Thread"
+print "Exiting Main Thread - ODEV03"
