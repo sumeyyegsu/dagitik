@@ -44,8 +44,8 @@ def reading(threadName):
     originalString = originalFile.read()
     j = 0
     while j < len(originalString):
-        print threadName + " IS READING: " + original_string[j:j+l]
-        readQueue.put(original_string[j:j+l])
+        print threadName + " IS READING: " + originalString[j:j+l]
+        readQueue.put(originalString[j:j+l])
         j += l
     originalFile.close()
     queueLock.release()
@@ -65,7 +65,7 @@ def encrypting(threadName):
             cryptedData += chr(a)
         else:                               # eger karakter alfabede yer almiyorsa
             cryptedData += character
-    print threadName + " IS ENCRYPTING:  " + data + "----" + threadName + "---->" + crypted_data
+    print threadName + " IS ENCRYPTING:  " + currentPart + "----" + threadName + "---->" + cryptedData
     writeQueue.put(cryptedData)
     queueLock.release()
 
