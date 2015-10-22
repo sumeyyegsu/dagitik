@@ -76,24 +76,7 @@ def writing (threadName):
 
 
 def process_data(threadName, q):
-    print "thread %d" % i
-    alphabet = "abcdefghijklmnopqrstuvwxyz"     # 26 harften olusan alfabeyi tanimlama
-    crypted_text = ""                           # kripte edilmis metin icin bos bir string tanimiyoruz
-                                                # sifreleme dongusu
-    if((j+l) <= len(metin_text)):
-        print "j: %d" % j
-        print "metin_text[j:j+l]: ", metin_text[j:j+l]
-        for character in metin_text[j:j+l]:     # metindeki her karakter icin
-            if character in alphabet:           # eger karakter alfabede yer aliyorsa
-                                                # sagdan sola dairesel kaydirma
-                a = ord(character) - s          # karakterin alfabedeki sirasi + shift
-                if a < ord('a'):
-                    a += 26
-                crypted_text += chr(a)
-            else:                               # eger karakter alfabede yer almiyorsa
-                crypted_text += character
-    print "crypted_text: ", crypted_text
-    queue.put(crypted_text)
+    ''' fonksiyonlar cagirilacak '''
     
 # Create a tread list
 for i in range(n):
