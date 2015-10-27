@@ -6,7 +6,7 @@ import socket
 import threading
 
 
-# Bir thread icinde kendisine gelen mesajlari ekrana basacak
+# Client bu thread icinde, kendisine gelen mesajlari ekrana basacak.
 class readThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
@@ -25,7 +25,7 @@ class readThread (threading.Thread):
         self.clientSocket.close()
 
 
-# Diger bir thread icinde kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
+# Client bu thread icinde, kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
 class writeThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
