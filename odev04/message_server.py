@@ -14,7 +14,6 @@ class myThread (threading.Thread):
         self.threadID = threadID
         self.clientSocket = clientSocket
         self.clientAddr = clientAddr
-        self.running = True
     def run(self):
         print 'Starting Thread-' + str(self.threadID)
 #       ...
