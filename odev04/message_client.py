@@ -3,7 +3,7 @@ import threading
 import random
 
 
-# Bir thread i¸cinde kendisine gelen mesajları ekrana basacak.
+# Bir thread icinde kendisine gelen mesajlari ekrana basacak
 class readThread (threading.Thread):
 # ...
     def __init__(self):
@@ -12,12 +12,7 @@ class readThread (threading.Thread):
         self.client = socket.socket()
         self.client.connect((self.host, self.port))
         self.text = ""
-
-    def run(self):
-        while 1:
-            print('Client sent:', self.sock.recv(2048).decode())
-            self.sock.send(b'Oi you sent something to me')
-
+        
     def run(self):
         while True:
             try:
@@ -32,7 +27,7 @@ class readThread (threading.Thread):
         self.client.close()
 
 
-# Diger bir thread icinde kullanıcıdan giris bekleyip, gelen girisleri sunucuya gonderecek.
+# Diger bir thread icinde kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
 # class writeThread (threading.Thread):
 # ...
 
