@@ -6,7 +6,6 @@ import threading
 import random
 import time
 
-threadCounter = 0
 
 class myThread (threading.Thread):
     def __init__(self, threadID, clientSocket, clientAddr):
@@ -22,10 +21,10 @@ class myThread (threading.Thread):
                     data = self.clientSocket.recv(buff)
                 except:
                     data = ''
-                if data:
+                if data and (not data == 'close'):
                     self.clientSocket.send('Peki ' + str(addr[0]) + '\n')
-                if random.randint(1, 10) == 5:
-                    self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') #su an olan zamani istemciye gonderme
+                if random.randint(1, 5) == 2:
+                    self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') # su an olan zamani istemciye gonderme
             except:
                 print 'Connection lost\n'
                 print 'Ending Thread-' + str(self.threadID)
@@ -34,6 +33,7 @@ class myThread (threading.Thread):
                 break
         self.clientSocket.close()
         print 'Connection closed.'
+
 
 threadCounter = 0
 buff = 2048
