@@ -19,13 +19,13 @@ class myThread (threading.Thread):
         while True:
             try:
                 try:
-                    data = c.recv(buff)
+                    data = self.clientSocket.recv(buff)
                 except:
                     data = ''
                 if data:
-                    c.send('Peki ' + str(addr[0]) + '\n')
+                    self.clientSocket.send('Peki ' + str(addr[0]) + '\n')
                 if random.randint(1, 10) == 5:
-                    c.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') #su an olan zamani istemciye gonderme
+                    self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') #su an olan zamani istemciye gonderme
             except:
                 print 'Connection lost\n'
                 print 'Ending Thread-' + str(self.threadID)
