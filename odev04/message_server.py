@@ -24,7 +24,7 @@ class myThread (threading.Thread):
                 if data and (not data == 'close'):
                     self.clientSocket.send('Peki ' + str(addr[0]) + '\n')
                 if random.randint(1, 5) == 2:
-                    self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') # su an olan zamani istemciye gonderme
+                    self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S")) # su an olan zamani istemciye gonderme
             except:
                 print 'Connection lost\n'
                 print 'Ending Thread-' + str(self.threadID)
