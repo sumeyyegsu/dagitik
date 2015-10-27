@@ -7,6 +7,7 @@ import random
 class readThread (threading.Thread):
 # ...
     def __init__(self):
+        super(readThread, self).__init__()
         self.host = socket.gethostname()
         self.port = 12345
         self.client = socket.socket()
