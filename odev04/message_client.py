@@ -1,3 +1,7 @@
+__author__ = 'sumeyye'
+
+'''CLIENT'''
+
 import socket
 import threading
 
