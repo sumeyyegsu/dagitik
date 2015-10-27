@@ -16,27 +16,27 @@ class myThread (threading.Thread):
         self.clientAddr = clientAddr
     def run(self):
         print 'Starting Thread-' + str(self.threadID)
-#       ...
         while True:
             try:
-                data = c.recv(2048)
-            except:
-                data = ""
-            if not data:
-                break
-
-            for i in range(threadCounter):
                 try:
-                    c.send('Peki ' + str(addr[0]) + '\n')
-                    currentTime = time.ctime(time.time()) + '\n'
-                    c.send('Merhaba, saat su an ' + currentTime.encode('ascii')) #su an olan zamani istemciye gonderme
+                    data = c.recv(buff)
                 except:
-                    print 'Connection lost\n'
-                    print 'Ending Thread-' + str(self.threadID)
-                    self.threadID.remove(i)
-        c.close()
-#       ...
+                    data = ''
+                if data:
+                    c.send('Peki ' + str(addr[0]) + '\n')
+                if random.randint(1, 10) == 5:
+                    c.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S") + '\n') #su an olan zamani istemciye gonderme
+            except:
+                print 'Connection lost\n'
+                print 'Ending Thread-' + str(self.threadID)
+                break
+            if 'close' == data.rstrip():
+                break
+        self.clientSocket.close()
+        print 'Connection closed.'
 
+threadCounter = 0
+buff = 2048
 s = socket.socket()
 print 'Socket created'
 host = socket.gethostname()     # sunucunun adresi
@@ -46,7 +46,7 @@ print 'Socket bind complete'
 s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
 print 'Socket now listening'
 while True:
-    print 'Waiting for connection'
+    print 'Waiting for connection. Listenin port ' + str(port) + ' ...'
     c, addr = s.accept()
     print 'Got a connection from' + str(addr)
     threadCounter += 1
