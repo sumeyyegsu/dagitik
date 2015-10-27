@@ -1,43 +1,52 @@
 import socket
 import threading
-import random
 
 
 # Bir thread icinde kendisine gelen mesajlari ekrana basacak
 class readThread (threading.Thread):
-# ...
-    def __init__(self):
-        super(readThread, self).__init__()
-        self.host = socket.gethostname()
-        self.port = 12345
-        self.client = socket.socket()
-        self.client.connect((self.host, self.port))
-        self.text = ""
-        
+    def __init__(self, clientSocket):
+        threading.Thread.__init__(self)
+        self.clientSocket = clientSocket
+    
     def run(self):
-        while True:
+        print 'Starting readThread'
+        global closeFlag
+        while not closeFlag:
             try:
-                data = self.client.recv(2048)
+                data = self.clientSocket.recv(buff)
             except:
-                break
+                data = ''
             if data:
-#                self.l.acquire()
-                self.text = data
-                print self.text
-#                self.l.release()
-        self.client.close()
+                print data
+        self.clientSocket.close()
 
 
 # Diger bir thread icinde kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
-# class writeThread (threading.Thread):
-# ...
+class writeThread (threading.Thread):
+    def __init__(self, clientSocket):
+        threading.Thread.__init__(self)
+        self.clientSocket = clientSocket
+    
+    def run(self):
+        print 'Starting writeThread'
+        global closeFlag
+        while not closeFlag:
+            data = raw_input()
+            if data:
+                self.clientSocket.send(data)
+                if data == 'close':
+                    closeFlag = 1
+        self.clientSocket.close()
+        print 'Client closed'
 
-rThread = readThread()
+buff = 2048
+closeFlag = 0
+host = socket.gethostname()
+port = 12345
+client = socket.socket()
+client.connect((host, port))
 
+rThread = readThread(client)
 rThread.start()
-
-# wThread = writeThread(...)
-
-# wThread.start()
-
-# ...
+wThread = writeThread(client)
+wThread.start()
