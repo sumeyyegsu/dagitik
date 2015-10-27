@@ -37,7 +37,7 @@ class writeThread (threading.Thread):
                 if data == 'close':
                     closeFlag = 1
         self.clientSocket.close()
-        print 'Client closed'
+        print 'Client closed.'
 
 buff = 2048
 closeFlag = 0
