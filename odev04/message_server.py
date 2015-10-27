@@ -3,7 +3,7 @@ __author__ = 'sumeyye'
 ''' SERVER '''
 import socket
 import threading
-import datetime
+import random
 import time
 
 threadCounter = 0
