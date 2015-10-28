@@ -7,13 +7,13 @@ import threading
 
 
 # Client bu thread icinde, kendisine gelen mesajlari ekrana basacak.
-class readThread (threading.Thread):
+class receiveFromServerThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
         self.clientSocket = clientSocket
     
     def run(self):
-        print 'Starting readThread'
+        print 'Starting receiveFromServerThread'
         global closeFlag
         while not closeFlag:
             try:
@@ -26,13 +26,13 @@ class readThread (threading.Thread):
 
 
 # Client bu thread icinde, kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
-class writeThread (threading.Thread):
+class sendToServerThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
         self.clientSocket = clientSocket
     
     def run(self):
-        print 'Starting writeThread'
+        print 'Starting sendToServerThread.'
         global closeFlag
         while not closeFlag:
             data = raw_input()
@@ -50,7 +50,7 @@ port = 12345
 client = socket.socket()
 client.connect((host, port))
 
-rThread = readThread(client)
+rThread = receiveFromServerThread(client)
 rThread.start()
-wThread = writeThread(client)
-wThread.start()
+sThread = sendToServerThread(client)
+sThread.start()
