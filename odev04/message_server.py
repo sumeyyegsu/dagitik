@@ -48,6 +48,7 @@ s.bind((host, port))            # bind islemi gerceklestirilir
 print 'Socket bind complete'
 s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
 print 'Socket now listening'
+
 while True:
     print 'Waiting for connection. Listenin port ' + str(port) + ' ...'
     c, addr = s.accept()
