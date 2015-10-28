@@ -23,7 +23,7 @@ class myThread (threading.Thread):
                 except:
                     data = ''
                 if data and (not data == 'close'):
-                    self.clientSocket.send('Peki ' + str(addr[0]) + '\n')
+                    self.clientSocket.send('Peki ' + str(addr[0]))
                 if random.randint(1, 5) == 2:
                     self.clientSocket.send('Merhaba, saat su an ' + time.strftime("%H:%M:%S"))
             except:
