@@ -1,0 +1,47 @@
+------------------------------------------------------------------------------------------------------------------------
+ORNEK - 1 : 1 CLIENT
+------------------------------------------------------------------------------------------------------------------------
+MESSAGE_SERVER
+
+Socket created
+Socket bind complete
+Socket now listening
+Waiting for connection. Listenin port 12345 ...
+Got a connection from('192.168.1.6', 57032)
+Starting Thread-1
+ Waiting for connection. Listenin port 12345 ...
+Connection closed.
+Got a connection from('192.168.1.6', 57033)
+Starting Thread-2Waiting for connection. Listenin port 12345 ...
+Connection closed.
+
+------------------------------------------------------------------------------------------------------------------------
+MESSAGE_CLIENT - 1
+
+Starting Thread-Receive From Server
+Starting Thread-Send To Server.
+merhaba ben 1. client
+Peki 192.168.1.6 - 57032
+Merhaba, saat su an 23:41:44
+merhabaaa
+Peki 192.168.1.6 - 57032
+merhabaaaa
+Peki 192.168.1.6 - 57032
+close
+Client closed.
+
+Process finished with exit code 0
+-------------------------------------------------------------------------------------------------------------------------
+MESSAGE_CLIENT - 2
+
+Starting Thread-Receive From Server
+Starting Thread-Send To Server.
+merhaba ben 2. client
+Peki 192.168.1.6 - 57033
+merhabaaa
+Peki 192.168.1.6 - 57033
+close
+Client closed.
+
+Process finished with exit code 0
+---------------------------------------------------------------------------------------------------------------------------
