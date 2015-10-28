@@ -2,7 +2,6 @@ __author__ = 'sumeyye'
 
 ''' SERVER '''
 
-# gerekli modulleri import etme
 import socket
 import threading
 import random
