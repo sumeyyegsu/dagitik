@@ -2,12 +2,13 @@ __author__ = 'sumeyye'
 
 ''' SERVER '''
 
+# gerekli modulleri import etme
 import socket
 import threading
 import random
 import time
 
-
+# clientlara cevap vermesi icin yaratilacak threadlerin class'i
 class myThread (threading.Thread):
     def __init__(self, threadID, clientSocket, clientAddr):
         threading.Thread.__init__(self)
@@ -38,7 +39,8 @@ class myThread (threading.Thread):
 
 threadCounter = 0
 buff = 2048
-s = socket.socket()
+
+s = socket.socket()             # socket yaratiyoruz
 print 'Socket created'
 host = socket.gethostname()     # sunucunun adresi
 port = 12345                    # dinleyecegi port numarasi
