@@ -13,7 +13,7 @@ class receiveFromServerThread (threading.Thread):
         self.clientSocket = clientSocket
     
     def run(self):
-        print 'Starting receiveFromServerThread'
+        print 'Starting Thread-Receive From Server'
         global closeFlag
         while not closeFlag:
             try:
@@ -32,7 +32,7 @@ class sendToServerThread (threading.Thread):
         self.clientSocket = clientSocket
     
     def run(self):
-        print 'Starting sendToServerThread.'
+        print 'Starting Thread-Send To Server.'
         global closeFlag
         while not closeFlag:
             data = raw_input()
