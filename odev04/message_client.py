@@ -5,8 +5,7 @@ __author__ = 'sumeyye'
 import socket
 import threading
 
-
-# Client bu thread icinde, kendisine gelen mesajlari ekrana basacak.
+# client bu thread icinde, server'dan gelen mesajlari ekrana basacak.
 class receiveFromServerThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
@@ -25,7 +24,7 @@ class receiveFromServerThread (threading.Thread):
         self.clientSocket.close()
 
 
-# Client bu thread icinde, kullanicidan giris bekleyip, gelen girisleri sunucuya gonderecek.
+# client bu thread icinde, kullanicidan giris bekleyip, gelen girisleri server'a gonderecek.
 class sendToServerThread (threading.Thread):
     def __init__(self, clientSocket):
         threading.Thread.__init__(self)
@@ -44,7 +43,7 @@ class sendToServerThread (threading.Thread):
         print 'Client closed.'
 
 buff = 2048
-closeFlag = 0
+closeFlag = 0 
 host = socket.gethostname()
 port = 12345
 client = socket.socket()
