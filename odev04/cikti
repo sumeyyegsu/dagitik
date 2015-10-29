@@ -1,8 +1,7 @@
 ------------------------------------------------------------------------------------------------------------------------
 ORNEK CIKTILAR
 ------------------------------------------------------------------------------------------------------------------------
-MESSAGE_SERVER
-
+C:\Python27\python.exe C:/Users/sumeyye/PycharmProjects/dagitik/odev04/message_server.py
 Socket created
 Socket bind complete
 Socket now listening
@@ -16,8 +15,7 @@ Starting Thread-2Waiting for connection. Listenin port 12345 ...
 Connection closed.
 
 ------------------------------------------------------------------------------------------------------------------------
-MESSAGE_CLIENT - 1
-
+C:\Python27\python.exe C:/Users/sumeyye/PycharmProjects/dagitik/odev04/message_client.py
 Starting Thread-Receive From Server
 Starting Thread-Send To Server.
 merhaba ben 1. client
@@ -32,8 +30,7 @@ Client closed.
 
 Process finished with exit code 0
 -------------------------------------------------------------------------------------------------------------------------
-MESSAGE_CLIENT - 2
-
+C:\Python27\python.exe C:/Users/sumeyye/PycharmProjects/dagitik/odev04/message_client.py
 Starting Thread-Receive From Server
 Starting Thread-Send To Server.
 merhaba ben 2. client
