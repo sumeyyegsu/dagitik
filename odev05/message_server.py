@@ -90,6 +90,7 @@ class myWriteThread (threading.Thread):
     def run(self):
         print 'Starting myWriteThread-' + str(self.threadID)
         while True:
+'''
             try:
                 try:
                     data = self.clientSocket.recv(buff)
@@ -100,6 +101,7 @@ class myWriteThread (threading.Thread):
             except:
                 print 'Connection lost. Ending myWriteThread-' + str(self.threadID)
                 break
+'''
         self.clientSocket.close()
         print 'Connection closed.'
         
