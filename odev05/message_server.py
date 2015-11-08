@@ -131,6 +131,12 @@ while True:
     print 'Waiting for connection. Listenin port ' + str(port) + ' ...'
     c, addr = s.accept()
     print 'Got a connection from' + str(addr)
-    threadCounter += 1
-    thread = myThread(threadCounter, c, addr)
-    thread.start()
+    print 'Got a connection from' + str(addr)
+
+    readThreadCounter += 1
+    readThread = myReadThread(readThreadCounter, c, addr)
+    readThread.start()
+
+    writeThreadCounter += 1
+    writeThread = myWriteThread(writeThreadCounter, c, addr)
+    writeThread.start()
