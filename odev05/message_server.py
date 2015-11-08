@@ -6,81 +6,52 @@ __author__ = 'sumeyye'
 import socket
 import threading
 
+
 ''' ------------------------------------------- PARSER -------------------------------------------------------- '''
 ''' ----------------------------------------------------------------------------------------------------------- '''
 def parser(self, data):
-    print ("PARSER START..."
-           "")
+    print ("PARSER START...")
     data = data.strip()
-    newdict = {}
-    # henuz login olmadiysa
-    if not self.nickname and not data[0:3] == "USR":
-        print "NOT USER NOT NICKNAME"
-        # ...
-
-    # data sekli bozuksa --> XXX BLABLABLA yani 4. karakter bosluk degilse forma uygunde degildir
-    # daha sonra 'istek listesinde' degilse de bozuktur diyebiliriz
+    
+    nickname = data[4:]
+    newdict = {nickname:data}
+    
+    # ilk kod 3 karakterden olusmuyorsa
     if not data[3] == " ":
         response = "ERR"
-        self.csend(response)
-        return 0
+        return response
 
-    if data[0:3] == "USR":
-        nickname = data[4:]
-        # kullanici yoksa
+     if data[0:3] == "USR":
+        # kullanici fihristte yoksa eklenecek
         if nickname not in fihrist:
             response = "HEL " + nickname
-            # ...
-            print 'response: ' + self.nickname
             # fihristi guncelle
-            newdict = {nickname:data}
             self.fihrist.update(newdict)
-            # ...
-            self.lQueue.put(self.nickname + " has joined.")
-            return 0
+            return response
+        # kullanici zaten fihristte varsa reddedilecek
         else:
-            # kullanici reddedilecek
             response = "REJ " + nickname
-            self.csend(response)
-            # ...
-            # baglantiyi kapat
-            self.csoc.close()
-            return 1
+            return response
     elif data[0:3] == "QUI":
         response = "BYE " + self.nickname
-        # ...
         # fihristten sil
         fihrist.pop(newdict)
-        # log gonder
-        # ...
-        # baglantiyi sil
-        # ...
-        # ...
+        return response
     elif data[0:3] == "LSQ":
-        response = "LSA "
+        print "LSQ"
         # ...
     elif data[0:3] == "TIC":
-        print "TIC"
-        # ...
+        response "T0C"
+        return response
     elif data[0:3] == "SAY":
         print "SAY"
         # ...
     elif data[0:3] == "MSG":
-        # ...
-        '''
-        if not to_nickname in self.fihrist.keys():
-            response = "MNO"
-        else:
-            queue_message = (to_nickname, self.nickname, message)
-            # gonderilecek threadQueueyu fihristten alip icine yaz
-            self.fihrist[to_nickname].put(queue_message)
-            response = "MOK"
-            self.csend(response)
-        '''
+        print "MGS"
     else:
         # bir seye uymadiysa protokol hatasi verilecek
         response = "ERR"
-        # ...
+        return response
 
 ''' ------------------------------------------- MYREADTHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
