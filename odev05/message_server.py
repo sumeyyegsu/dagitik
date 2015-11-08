@@ -99,14 +99,10 @@ class myReadThread (threading.Thread):
                     data = self.clientSocket.recv(buff)
                 except:
                     data = ''
-                if data and (not data == 'close'):
-                    self.clientSocket.send('Peki ' + str(self.clientAddr[0]) + ' - ' + str(self.clientAddr[1]))
+                if data:
                     parser(self, data)
             except:
-                print 'Connection lost\n'
-                print 'Ending Thread-' + str(self.threadID)
-                break
-            if 'close' == data.rstrip():
+                print 'Connection lost. Ending myReadThread-' + str(self.threadID)
                 break
         self.clientSocket.close()
         print 'Connection closed.'
@@ -128,14 +124,10 @@ class myWriteThread (threading.Thread):
                     data = self.clientSocket.recv(buff)
                 except:
                     data = ''
-                if data and (not data == 'close'):
-                    self.clientSocket.send('Peki ' + str(self.clientAddr[0]) + ' - ' + str(self.clientAddr[1]))
-                    parser(self, data)
+                if data:
+                     # parser(self, data)
             except:
-                print 'Connection lost\n'
-                print 'Ending Thread-' + str(self.threadID)
-                break
-            if 'close' == data.rstrip():
+                print 'Connection lost. Ending myWriteThread-' + str(self.threadID)
                 break
         self.clientSocket.close()
         print 'Connection closed.'
