@@ -82,18 +82,17 @@ def parser(self, data):
         response = "ERR"
         # ...
 
-''' ------------------------------------------- MYTHREAD -------------------------------------------------------- '''
+''' ------------------------------------------- MYREADTHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 
-# clientlara cevap vermesi icin yaratilacak threadlerin class'i
-class myThread (threading.Thread):
+class myReadThread (threading.Thread):
     def __init__(self, threadID, clientSocket, clientAddr):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.clientSocket = clientSocket
         self.clientAddr = clientAddr
     def run(self):
-        print 'Starting Thread-' + str(self.threadID)
+        print 'Starting myReadThread-' + str(self.threadID)
         while True:
             try:
                 try:
@@ -112,7 +111,35 @@ class myThread (threading.Thread):
         self.clientSocket.close()
         print 'Connection closed.'
 
+''' ------------------------------------------- MYWRITETHREAD -------------------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------------ '''
 
+class myWriteThread (threading.Thread):
+    def __init__(self, threadID, clientSocket, clientAddr):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.clientSocket = clientSocket
+        self.clientAddr = clientAddr
+    def run(self):
+        print 'Starting myWriteThread-' + str(self.threadID)
+        while True:
+            try:
+                try:
+                    data = self.clientSocket.recv(buff)
+                except:
+                    data = ''
+                if data and (not data == 'close'):
+                    self.clientSocket.send('Peki ' + str(self.clientAddr[0]) + ' - ' + str(self.clientAddr[1]))
+                    parser(self, data)
+            except:
+                print 'Connection lost\n'
+                print 'Ending Thread-' + str(self.threadID)
+                break
+            if 'close' == data.rstrip():
+                break
+        self.clientSocket.close()
+        print 'Connection closed.'
+        
 fihrist = {}    #fihristin tanimlanmasi
 
 threadCounter = 0
