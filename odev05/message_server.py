@@ -40,9 +40,8 @@ class myReadThread (threading.Thread):
         self.clientDict = clientDict
         self.nickname = ""
 
-# parser kuyruk mesajlari ve response'u uretecek        
+    # parser kuyruk mesajlari ve response'u uretecek        
     def parser(self, data):
-        print ("PARSER START...")
         data = data.strip()
         logMessage = ""
           # kullanici ilk defa giris yapmak istiyorsa
@@ -128,67 +127,69 @@ class myReadThread (threading.Thread):
         self.clientSocket.close()
         logQueue.put('Connection closed.' + "\n")
 
-
 ''' ------------------------------------------- MYWRITETHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------------ '''
 # kuyruk dinliyor
 class myWriteThread (threading.Thread):
-    def __init__(self, threadID, clientSocket, clientAddr, threadQueue, logQueue):
+    def __init__(self, threadID, clientSocket, clientAddr, threadQueue, clientDict):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.clientSocket = clientSocket
         self.clientAddr = clientAddr
         self.threadQueue = threadQueue
-        self.logQueue = logQueue
+        self.clientDict = clientDict
     def run(self):
-        print 'Starting myWriteThread-' + str(self.threadID)
+        logQueue.put('Starting myWriteThread-' + str(self.threadID))
+        acceptedList = ['HEL', 'REJ', 'BYE', 'LSA', 'TOC', 'SOK', 'MOK', 'MNO', 'ERR', 'ERL']
         while True:
-            # ...
-            # sirada mesaj varsa
+            # Kuyrukta mesaj varsa
             if self.threadQueue.qsize() > 0:
                 queueMessage = self.threadQueue.get()
-                # gonderilen ozel mesajsa => nickname:message
-                if ':' in queueMessage:
-                    messageToSend = "MSG " + queueMessage[0] + ":" + queueMessage[1]
-                    fihrist[queueMessage[0]]
-                # genel mesajsa => message
-                elif queueMessage[1]:
-                    messageToSend = "SAY "
-                # hicbiri degilse sistem mesajidir.
+                if queueMessage[0:3] not in acceptedList:
+                    # gonderilen ozel mesaj ve ya genel mesajsa
+                    messageToSend = queueMessage[4:]
+                # hicbiri degilse sistem mesajidi
                 else:
-                    messageToSend = "SYS "
-            # ...
-        self.logQueue.put("Exiting myWriteThread-" + self.threadID)
+                    messageToSend = queueMessage
+                self.clientSocket.send(messageToSend)
+        logQueue.put("Exiting myWriteThread-" + self.threadID + "\n")
   
         
         
-fihrist = {}    #fihristin tanimlanmasi
+clientDict = {}
+threads = []
 threadCounter = 0
 buff = 2048
+logQueue = Queue.Queue()
 
 s = socket.socket()             # socket yaratiyoruz
-print 'Socket created'
+logQueue.put('Socket created.')
 host = socket.gethostname()     # sunucunun adresi
 port = 12345                    # dinleyecegi port numarasi
 s.bind((host, port))            # bind islemi gerceklestirilir
-print 'Socket bind complete'
 s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
 print 'Socket now listening'
 
+# logThread'i yaratip, thread listesine ekleyip baslatiyoruz
 lqueue = Queue.Queue()
-logThread = myLogThread(lqueue, "log.txt")      # log icin thread yaratiyoruz
-logThread.start()                               # threadi baslatiyoruz
+logThread = myLogThread("log.txt")
+threads.append(logThread)
+logThread.start()
 
 while True:
-    print 'Waiting for connection. Listenin port ' + str(port) + ' ...'
     c, addr = s.accept()
-    print 'Got a connection from' + str(addr)
+    logQueue.put('Got a connection from ' + str(addr))
     
-    queue = Queue.Queue()
+    threadQueue = Queue.Queue()
 
     threadCounter += 1
-    readThread = myReadThread(threadCounter, c, addr, queue, lqueue)
+    readThread = myReadThread(threadCounter, c, addr, threadQueue, clientDict)
+    threads.append(readThread)
     readThread.start()
 
-    writeThread = myWriteThread(writeThreadCounter, c, addr, queue, lqueue)
+    writeThread = myWriteThread(writeThreadCounter, c, addr, threadQueue, clientDict)
+    threads.append(writeThread)
     writeThread.start()
+    
+for t in threads:
+    t.join()
