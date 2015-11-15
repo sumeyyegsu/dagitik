@@ -187,7 +187,7 @@ while True:
     threads.append(readThread)
     readThread.start()
 
-    writeThread = myWriteThread(writeThreadCounter, c, addr, threadQueue, clientDict)
+    writeThread = myWriteThread(threadCounter, c, addr, threadQueue, clientDict)
     threads.append(writeThread)
     writeThread.start()
     
