@@ -105,8 +105,6 @@ class ClientDialog(QDialog) :
         self.setLayout(self.vbox)
 
     def cprint (self, data):
-        self.show()
-        self.qt_app.exec_()
         self.channel.append(data)
 
     def outgoing_parser(self):
