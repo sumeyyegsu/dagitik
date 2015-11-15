@@ -168,7 +168,6 @@ host = socket.gethostname()     # sunucunun adresi
 port = 12345                    # dinleyecegi port numarasi
 s.bind((host, port))            # bind islemi gerceklestirilir
 s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
-print 'Socket now listening'
 
 # logThread'i yaratip, thread listesine ekleyip baslatiyoruz
 lqueue = Queue.Queue()
