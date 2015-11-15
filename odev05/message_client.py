@@ -21,43 +21,44 @@ class myReadThread (threading.Thread):
 
     # socket uzerinden gelen mesajlari degerlendirip buna gore hareketler tanimlayacak
     def incoming_parser(self, data):
-        response = ""
+
         if len(data) == 0:
             return
-        if len(data) > 3 and not data[3] == " ":
-            print "ERR"
-            response = "ERR"
+        if len(data) > 3 and data[3] == " ":
 
-        rest = data[4:]
-        if data[0:3] == "HEL":
-            response = "SERVER: Registered as " + rest + "."
-            print response
-        elif data[0:3] == "REJ":
-            response = "SERVER: Rejected " + rest + "."
-            print response
-            self.cSocket.close()
-        elif data[0:3] == "BYE":
-            response = "SERVER: Bye " + rest
-            print response
-            self.cSocket.close()
-        elif data[0:3] == "ERL":
-            response = "SERVER: Register first."
-            print response
-        elif data[0:3] == "MNO":
-            response = "SERVER: User " + rest + " does not exist."
-            print response
-        elif data[0:3] == "SYS":
-            response = "SERVER: " + rest
-            print response
-        elif data[0:3] == "LSA":
-			response = "SERVER: Registered users " + rest + "."
-			print response
-        elif data[0:3] == "SOK" or data[0:3] == "MOK":
-            response = "SERVER: Message sent successfully."
-            print response
+            rest = data[4:]
+            if data[0:3] == "HEL":
+                response = "SERVER: Registered as " + rest + "."
+                print response
+            elif data[0:3] == "REJ":
+                response = "SERVER: Rejected " + rest + "."
+                print response
+                self.cSocket.close()
+            elif data[0:3] == "BYE":
+                response = "SERVER: Bye " + rest
+                print response
+                self.cSocket.close()
+            elif data[0:3] == "ERL":
+                response = "SERVER: Register first."
+                print response
+            elif data[0:3] == "MNO":
+                response = "SERVER: User " + rest + " does not exist."
+                print response
+            elif data[0:3] == "SYS":
+                response = "SERVER:" + rest
+                print response
+            elif data[0:3] == "LSA":
+			    response = "SERVER: Registered users " + rest + "."
+			    print response
+            elif data[0:3] == "SOK" or data[0:3] == "MOK":
+                response = "SERVER: Message sent successfully."
+                print response
+            else:
+                response = data
         else:
-            response = data
+            response = "SERVER: Command error."
         return response
+
 
     def run(self):
          while True:
