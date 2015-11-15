@@ -4,9 +4,8 @@ __author__ = 'sumeyye'
 import sys
 import socket
 import threading
-import Queue
 import time
-from multiprocessing import Queue
+import Queue
 from PyQt4.QtGui import *
 
 ''' ------------------------------------------- MYREADTHREAD ---------------------------------------------------- '''
@@ -90,9 +89,10 @@ class WriteThread_Client (threading.Thread) :
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # Qt tabanli grafik arabirim
 class ClientDialog(QDialog) :
-    def __init__(self):
+    def __init__(self, threadQueue):
         self.qt_app = QApplication(sys.argv)
         QDialog.__init__(self,None)
+        self.threadQueue = threadQueue
         self.setWindowTitle('IRC Client (Sumeyye KONAK)')
         self.setMinimumSize(500,200)
         self.vbox = QVBoxLayout()
@@ -110,27 +110,26 @@ class ClientDialog(QDialog) :
 
     def outgoing_parser(self):
         data = self.sender.text()
-        self.cprint(data)
         if len(data) == 0:
             return
-        if data[0] == "/":
-            command = data.split(" ")
 
-            if command[1] == "nick":
-                nickname = command[2]
-                self.threadQueue.put("USR" + " " + nickname)
-            if command[1] == "list":
+        elif data[0] == "/":
+
+            if data[1:5] == "nick":
+                self.threadQueue.put("USR " + data[5:])
+            if data[1:5] == "list":
                 self.threadQueue.put("LSQ")
-            elif command[1] == "quit":
+            elif data[1:5] == "quit":
                 self.threadQueue.put("QUI")
-            elif command[1] == "msg":
-                nickname_2 = command[2]
-                message_1 = command[3]
-                self.threadQueue.put("MSG" + " " + nickname_2 + " " + message_1)
-            else :
-                self.cprint("Local: Command Error.")
-        else :
-            self.threadQueue.put("SAY" + " " + data)
+            elif data[1:5] == "msg":
+                msg = str.split(data[5:], " ", 1)
+                nickname = msg[0]
+                message = msg[1]
+                self.threadQueue.put("MSG " + nickname + " " + message)
+            else:
+                self.cprint("LOCAL: Command error.")
+        else:
+            self.threadQueue.put("SAY " + data)
         self.sender.clear()
 
     def run(self):
@@ -146,10 +145,10 @@ s = socket.socket()
 host = socket.gethostname()
 port = 12345
 s.connect((host, port))
+print ("Baglanti kuruldu")
 
-threadQueue = Queue()
-
-app = ClientDialog()
+threadQueue = Queue.Queue()
+app = ClientDialog(threadQueue)
 
 readThread = myReadThread(s, app)
 readThread.start()
