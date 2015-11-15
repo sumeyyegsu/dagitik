@@ -14,13 +14,10 @@ from PyQt4.QtGui import *
 # soket uzerinden veri bekleyecek, veri geldiginde incoming_parser()'i calistiracak
 # cevap verilecekse eger, istemciye cevap dondurecek
 class myReadThread (threading.Thread):
-    def __init__(self, threadID, clientSocket, threadQueue, app):
+    def __init__(self, clientSocket, app):
         threading.Thread.__init__(self)
-        self.threadID = threadID
         self.clientSocket = clientSocket
-        self.threadQueue = threadQueue
         self.app = app
-        self.nickname = ""
 
     # socket uzerinden gelen mesajlari degerlendirip buna gore hareketler tanimlayacak
     def incoming_parser(self, data):
@@ -62,8 +59,8 @@ class myReadThread (threading.Thread):
             response = data
         return response
 
-    def run(self) :
-         while True :
+    def run(self):
+         while True:
             data = self.clientSocket.recv(buff)
             response = self.incoming_parser(data)
             self.threadQueue.put(response + "(" + time.strftime("%H:%M:%S") + ")")
@@ -72,9 +69,8 @@ class myReadThread (threading.Thread):
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # threadQueue'da mesaj varsa bunlari soket uzerinden gonderecek
 class WriteThread_Client (threading.Thread) :
-    def __init__(self, threadID,clientSocket,threadQueue):
+    def __init__(self, clientSocket,threadQueue):
         threading.Thread.__init__(self)
-        self.threadID = threadID
         self.clientSocket = clientSocket
         self.threadQueue = threadQueue
 
@@ -83,6 +79,7 @@ class WriteThread_Client (threading.Thread) :
                 if self.threadQueue.qsize() > 0:
                     queueMessage = self.threadQueue.get()
                     try:
+                    	print "Server'a gonderilen mesaj: " + queueMessage
                         self.clientSocket.send(queueMessage)
                     except socket.error:
                         self.clientSocket.close()
@@ -155,10 +152,10 @@ threadQueue = Queue()
 
 app = ClientDialog()
 
-readThread = myReadThread("ReadThread", s, threadQueue, app)
+readThread = myReadThread(s, app)
 readThread.start()
 
-writeThread = WriteThread_Client("WriteThread", s, threadQueue)
+writeThread = WriteThread_Client(s, threadQueue)
 writeThread.start()
 
 app.run()
