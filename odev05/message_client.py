@@ -53,7 +53,7 @@ class myReadThread (threading.Thread):
 			response = "SERVER: Registered users " + rest + "."
 			print response
         elif data[0:3] == "SOK" or data[0:3] == "MOK":
-            response = "Message sent successfully."
+            response = "SERVER: Message sent successfully."
             print response
         else:
             response = data
