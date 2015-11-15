@@ -37,7 +37,7 @@ class myReadThread (threading.Thread):
             print response
             self.cSocket.close()
         elif data[0:3] == "BYE":
-            response = "BYE " + rest
+            response = "SERVER: Bye " + rest
             print response
             self.cSocket.close()
         elif data[0:3] == "ERL":
@@ -47,7 +47,7 @@ class myReadThread (threading.Thread):
             response = "SERVER: User " + rest + " does not exist."
             print response
         elif data[0:3] == "SYS":
-            response = "SYSTEM MESSAGE:" + rest
+            response = "SERVER: " + rest
             print response
         elif data[0:3] == "LSA":
 			response = "SERVER: Registered users " + rest + "."
