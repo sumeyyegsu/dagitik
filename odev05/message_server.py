@@ -12,76 +12,101 @@ import time
 ''' ------------------------------------------- MYLOGTHREAD ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------ '''
 class myLogThread (threading.Thread):
-    def __init__(self, logQueue, logFileName):
+    def __init__(self, logFileName):
         threading.Thread.__init__(self)
-        self.logQueue = logQueue
-        self.fid = logFileName
+        self.fid = open(logFileName, "a")
     def log(self, message):
-        self.fid = open(self.fid, "a")
         self.fid.write(str(time.ctime()) + " - " + message)
         self.fid.flush()
     def run(self):
-        self.log("Starting LogThread")
+        self.log("Starting LogThread." + "\n")
         while True:
-            if not self.logQueue.empty():
-                self.log(self.logQueue.get() + "\n")
-        self.log("Exiting LogThread")
+            if not logQueue.empty():
+                self.log(str(logQueue.get()) + "\n")
+        self.log("Exiting LogThread." + "\n")
         self.fid.close()
         
 ''' ------------------------------------------- MYREADTHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-#socket dinliyor
+
+# socket dinliyor(parse edilmek icin gonderilen bir data var mi clienttan diye)
 class myReadThread (threading.Thread):
-    def __init__(self, threadID, clientSocket, clientAddr, threadQueue, logQueue):
+    def __init__(self, threadID, clientSocket, clientAddr, threadQueue, clientDict):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.clientSocket = clientSocket
         self.clientAddr = clientAddr
         self.threadQueue = threadQueue
-        self.logQueue = logQueue
+        self.clientDict = clientDict
+        self.nickname = ""
+
+# parser kuyruk mesajlari ve response'u uretecek        
     def parser(self, data):
         print ("PARSER START...")
         data = data.strip()
-
-        nickname = data[4:]
-        newdict = {nickname:data}
-
-        # ilk kod 3 karakterden olusmuyorsa
-        if not data[3] == " ":
-            response = "ERR"
-            return response
-
-        if data[0:3] == "USR":
-            # kullanici fihristte yoksa eklenecek
-            if nickname not in fihrist:
-                response = "HEL " + nickname
-                # fihristi guncelle
-                self.fihrist.update(newdict)
-                return response
-            # kullanici zaten fihristte varsa reddedilecek
+        logMessage = ""
+          # kullanici ilk defa giris yapmak istiyorsa
+        if data[0:3] == "USR" and self.nickname == "":
+            nickname = data[4:]
+            # client'in nickname'i bos degilse
+            if nickname != "":
+                # eger daha once login olmadiysa (fihristte yoksa onceden) fihriste ekleyecek
+                if nickname not in clientDict.keys():
+                    response = "HEL " + nickname
+                    self.nickname = nickname
+                    self.clientDict[self.nickname] = threadQueue
+                    logMessage = self.nickname + " has joined."
+                # daha once login olduysa reddedecek
+                else:
+                    response = "REJ " + nickname
+            # nickname'i yazmayarak hatali bir komut yazmissa
             else:
-                response = "REJ " + nickname
-                return response
-        elif data[0:3] == "QUI":
-            response = "BYE " + self.nickname
-            # fihristten sil
-            fihrist.pop(newdict)
-            return response
-        elif data[0:3] == "LSQ":
-            print "LSQ"
-            # ...
-        elif data[0:3] == "TIC":
-            response = "TOC"
-            return response
-        elif data[0:3] == "SAY":
-            print "SAY"
-            # ...
-        elif data[0:3] == "MSG":
-            print "MGS"
+                response = "ERR"
+
+        # daha once login olduysa (self.nickname'i bos degilse)
+        elif self.nickname != "":
+            # cikis yapmak istiyorsa
+            if data[0:3] == "QUI":
+                # fihristten sil
+                clientDict.pop(self.nickname)
+                logMessage = self.nickname + " has left."
+                response = "BYE " + self.nickname
+            # login olmus client listesini istiyorsa
+            elif data[0:3] == "LSQ":
+                clients = ""
+                # fihristi gezip key'leri(nickname) client degiskenine ekleyecek
+                for key in self.clientDict.keys():
+                    clients += key + ":"
+                clients = clients[:-1]  # sondaki fazla :'yi siliyoruz
+                response = "LSA " + clients
+            # baglantiyi kontrol etmek istiyorsa
+            elif data[0:3] == "TIC":
+                response = "TOC"
+
+            # genel mesaj gondermek istiyorsa
+            elif data[0:3] == "SAY":
+                print "client SAY dedi"
+                for key in self.clientDict.keys():
+                    if key != self.nickname:
+                        self.clientDict[key].put(data)
+                response = "SOK"
+
+            # ozel mesaj gondermek istiyorsa
+            elif data[0:3] == "MSG":
+                print "client MSG dedi"
+                key, message = str.split(data[4:], ":", 1)
+                if key not in self.clientDict.keys():
+                    response = "MNO"
+                else:
+                    self.clientDict[key].put("MGS " + self.nickname + ":" + message)
+                    response = "MOK"
+            # komut hataliysa
+            else:
+                response = "ERR"
+        # henuz login olmadiysa
         else:
-            # bir seye uymadiysa protokol hatasi verilecek
-            response = "ERR"
-            return response
+            response = "ERL"
+        return response, logMessage
 
     def run(self):
         print 'Starting myReadThread-' + str(self.threadID)
@@ -90,14 +115,18 @@ class myReadThread (threading.Thread):
                 try:
                     data = self.clientSocket.recv(buff)
                 except:
-                    data = ''
+                    data = ""
                 if data:
-                    parser(self, data)
+                    response, logMessage = self.parser(data)
+                    if response:
+                            self.threadQueue.put(response)
+                    if logMessage:
+                            logQueue.put(logMessage)
             except:
-                print 'Connection lost. Ending myReadThread-' + str(self.threadID)
+                logQueue.put('Connection lost. Ending myReadThread-' + str(self.threadID) + "\n")
                 break
         self.clientSocket.close()
-        print 'Connection closed.'
+        logQueue.put('Connection closed.' + "\n")
 
 
 ''' ------------------------------------------- MYWRITETHREAD -------------------------------------------------------- '''
