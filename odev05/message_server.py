@@ -108,7 +108,7 @@ class myReadThread (threading.Thread):
         return response, logMessage
 
     def run(self):
-        print 'Starting myReadThread-' + str(self.threadID)
+        logQueue.put('Starting myReadThread-' + str(self.threadID))
         while True:
             try:
                 try:
