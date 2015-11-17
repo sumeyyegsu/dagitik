@@ -23,76 +23,64 @@ class myReadThread (threading.Thread):
 
         if len(data) == 0:
             return
-        if len(data) > 3 and data[3] == " ":
-
-            rest = data[4:]
-            if data[0:3] == "HEL":
-                response = "SERVER: Registered as " + rest + "."
-                print response
-            elif data[0:3] == "REJ":
-                response = "SERVER: Rejected " + rest + "."
-                print response
-                self.cSocket.close()
-            elif data[0:3] == "BYE":
-                response = "SERVER: Bye " + rest
-                print response
-                self.cSocket.close()
-            elif data[0:3] == "ERL":
-                response = "SERVER: Register first."
-                print response
-            elif data[0:3] == "MNO":
-                response = "SERVER: User " + rest + " does not exist."
-                print response
-            elif data[0:3] == "SYS":
-                response = "SERVER:" + rest
-                print response
-            elif data[0:3] == "LSA":
-			    response = "SERVER: Registered users " + rest + "."
-			    print response
-            elif data[0:3] == "SOK" or data[0:3] == "MOK":
-                response = "SERVER: Message sent successfully."
-                print response
+        rest = data[4:]
+        if data[0:3] == "HEL":
+            response = "Registered as <" + rest + ">."
+        elif data[0:3] == "REJ":
+            response = "Rejected <" + rest + ">."
+            self.clientSocket.close()
+        elif data[0:3] == "BYE":
+            response = "Bye " + rest
+            self.clientSocket.close()
+        elif data[0:3] == "ERL":
+            response = "Register first."
+        elif data[0:3] == "ERR":
+            response = "Command error."
+        elif data[0:3] == "MNO":
+            response = "User " + rest + " does not exist."
+        elif data[0:3] == "SYS":
+            response = rest
+        elif data[0:3] == "LSA":
+            if data.find(':') != -1:
+			    response = "Registered users " + rest + "."
             else:
-                response = data
+                response = "There is no nickname registered."
+        elif data[0:3] == "SOK" or data[0:3] == "MOK":
+            response = "Message sent successfully."
         else:
-            response = "SERVER: Command error."
-        return response
-
-
+            response = data
+        self.app.cprint(response + "(" + time.strftime("%H:%M:%S") + ")")
+        
     def run(self):
          while True:
-            data = self.clientSocket.recv(buff)
-            response = self.incoming_parser(data)
-            self.threadQueue.put(response + "(" + time.strftime("%H:%M:%S") + ")")
+            data = str(self.clientSocket.recv(buff))
+            self.incoming_parser(data)
 
 ''' ------------------------------------------- MYWRITETHREAD ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # threadQueue'da mesaj varsa bunlari soket uzerinden gonderecek
 class WriteThread_Client (threading.Thread) :
-    def __init__(self, clientSocket,threadQueue):
+    def __init__(self, clientSocket, threadQueue):
         threading.Thread.__init__(self)
         self.clientSocket = clientSocket
         self.threadQueue = threadQueue
 
     def run(self):
             while True :
-                if self.threadQueue.qsize() > 0:
-                    queueMessage = self.threadQueue.get()
-                    try:
-                    	print "Server'a gonderilen mesaj: " + queueMessage
-                        self.clientSocket.send(queueMessage)
-                    except socket.error:
-                        self.clientSocket.close()
-                        break
+                queueMessage = str(self.threadQueue.get())
+                try:
+                    self.clientSocket.send(queueMessage)
+                except socket.error:
+                    self.clientSocket.close()
+                    break
 
 ''' ------------------------------------------- CLIENTDIALOG ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # Qt tabanli grafik arabirim
 class ClientDialog(QDialog) :
-    def __init__(self, threadQueue):
+    def __init__(self):
         self.qt_app = QApplication(sys.argv)
         QDialog.__init__(self,None)
-        self.threadQueue = threadQueue
         self.setWindowTitle('IRC Client (Sumeyye KONAK)')
         self.setMinimumSize(500,200)
         self.vbox = QVBoxLayout()
@@ -110,34 +98,32 @@ class ClientDialog(QDialog) :
 
     def outgoing_parser(self):
         data = self.sender.text()
+        self.cprint("Local: " + data + "(" + time.strftime("%H:%M:%S") + ")")
         if len(data) == 0:
             return
 
         elif data[0] == "/":
 
             if data[1:5] == "nick":
-                self.threadQueue.put("USR " + data[5:])
+                threadQueue.put("USR " + data[6:])
             if data[1:5] == "list":
-                self.threadQueue.put("LSQ")
+                threadQueue.put("LSQ")
             elif data[1:5] == "quit":
-                self.threadQueue.put("QUI")
-            elif data[1:5] == "msg":
-                msg = str.split(data[5:], " ", 1)
+                threadQueue.put("QUI")
+            elif data[1:5] == "msg ":
+                msg = data.split(" ")
                 nickname = msg[0]
                 message = msg[1]
-                self.threadQueue.put("MSG " + nickname + " " + message)
+                threadQueue.put("MSG " + nickname + ":" + message)
             else:
-                self.cprint("LOCAL: Command error.")
+                threadQueue.put("Command error. Try again.")
         else:
-            self.threadQueue.put("SAY " + data)
+            threadQueue.put("SAY " + data)
         self.sender.clear()
 
     def run(self):
-        '''Run the app and show the main from.'''
         self.show()
         self.qt_app.exec_()
-
-
 
 buff = 2048
 
@@ -145,15 +131,17 @@ s = socket.socket()
 host = socket.gethostname()
 port = 12345
 s.connect((host, port))
-print ("Baglanti kuruldu")
 
 threadQueue = Queue.Queue()
-app = ClientDialog(threadQueue)
+
+app = ClientDialog()
 
 readThread = myReadThread(s, app)
+readThread.daemon = True
 readThread.start()
 
 writeThread = WriteThread_Client(s, threadQueue)
+writeThread.daemon = True
 writeThread.start()
 
 app.run()
