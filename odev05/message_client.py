@@ -48,7 +48,7 @@ class myReadThread (threading.Thread):
             response = "Message sent successfully."
         else:
             response = data
-        self.app.cprint(response + "(" + time.ctime() + ")")
+        self.app.cprint(response + "(" + time.strftime("%H:%M:%S") + ")")
         
     def run(self):
          while True:
@@ -99,7 +99,7 @@ class ClientDialog(QDialog) :
 
     def outgoing_parser(self):
         data = self.sender.text()
-        self.cprint("Local: " + data + "(" + time.ctime() + ")")
+        self.cprint("Local: " + data + "(" + time.strftime("%H:%M:%S") + ")")
         if len(data) == 0:
             return
 
@@ -117,7 +117,7 @@ class ClientDialog(QDialog) :
                 message = msg[1]
                 threadQueue.put("MSG " + nickname + ":" + message)
             else:
-                self.cprint("Local: Command error. Try again.(" + time.ctime() + ")")
+                self.cprint("Local: Command error. Try again.(" + time.strftime("%H:%M:%S") + ")")
         else:
             threadQueue.put("SAY " + data)
         self.sender.clear()
