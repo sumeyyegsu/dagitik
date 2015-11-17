@@ -28,7 +28,6 @@ class myReadThread (threading.Thread):
             response = "Registered as <" + rest + ">."
         elif data[0:3] == "REJ":
             response = "Rejected <" + rest + ">."
-            self.clientSocket.close()
         elif data[0:3] == "BYE":
             response = "Bye " + rest
             self.clientSocket.close()
@@ -41,7 +40,7 @@ class myReadThread (threading.Thread):
         elif data[0:3] == "SYS":
             response = rest
         elif data[0:3] == "LSA":
-            if data.find(':') != -1:
+            if data[4] != "":
 		response = "Registered users " + rest + "."
             else:
                 response = "There is no nickname registered."
@@ -49,11 +48,12 @@ class myReadThread (threading.Thread):
             response = "Message sent successfully."
         else:
             response = data
-        self.app.cprint(response + "(" + time.strftime("%H:%M:%S") + ")")
+        self.app.cprint(response + "(" + time.ctime() + ")")
         
     def run(self):
          while True:
             data = str(self.clientSocket.recv(buff))
+            print "Server'dan gelen data: " + data
             self.incoming_parser(data)
 
 ''' ------------------------------------------- MYWRITETHREAD ---------------------------------------------------- '''
@@ -70,6 +70,7 @@ class WriteThread_Client (threading.Thread) :
                 queueMessage = str(self.threadQueue.get())
                 try:
                     self.clientSocket.send(queueMessage)
+                    print "Server'a gonderilen data: " + queueMessage
                 except socket.error:
                     self.clientSocket.close()
                     break
@@ -98,7 +99,7 @@ class ClientDialog(QDialog) :
 
     def outgoing_parser(self):
         data = self.sender.text()
-        self.cprint("Local: " + data + "(" + time.strftime("%H:%M:%S") + ")")
+        self.cprint("Local: " + data + "(" + time.ctime() + ")")
         if len(data) == 0:
             return
 
@@ -116,7 +117,7 @@ class ClientDialog(QDialog) :
                 message = msg[1]
                 threadQueue.put("MSG " + nickname + ":" + message)
             else:
-                threadQueue.put("Command error. Try again.")
+                self.cprint("Local: Command error. Try again.(" + time.ctime() + ")")
         else:
             threadQueue.put("SAY " + data)
         self.sender.clear()
@@ -131,6 +132,7 @@ s = socket.socket()
 host = socket.gethostname()
 port = 12345
 s.connect((host, port))
+print "Baglanti kuruldu."
 
 threadQueue = Queue.Queue()
 
