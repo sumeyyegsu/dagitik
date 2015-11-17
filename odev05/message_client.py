@@ -42,7 +42,7 @@ class myReadThread (threading.Thread):
             response = rest
         elif data[0:3] == "LSA":
             if data.find(':') != -1:
-			    response = "Registered users " + rest + "."
+		response = "Registered users " + rest + "."
             else:
                 response = "There is no nickname registered."
         elif data[0:3] == "SOK" or data[0:3] == "MOK":
