@@ -1,7 +1,4 @@
 __author__ = 'sumeyye'
-'''
-        SUNUCU
-                        '''
 
 import socket
 import threading
@@ -26,6 +23,7 @@ class myLogThread (threading.Thread):
         self.log("Exiting LogThread." + "\n")
         self.fid.close()
         
+        
 ''' ------------------------------------------- MYREADTHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 
@@ -44,7 +42,7 @@ class myReadThread (threading.Thread):
     def parser(self, data):
         data = data.strip()
         logMessage = ""
-          # kullanici ilk defa giris yapmak istiyorsa
+        # kullanici ilk defa giris yapmak istiyorsa
         if data[0:3] == "USR" and self.nickname == "":
             nickname = data[4:]
             # client'in nickname'i bos degilse
@@ -53,7 +51,7 @@ class myReadThread (threading.Thread):
                 if nickname not in clientDict.keys():
                     response = "HEL " + nickname
                     self.nickname = nickname
-                    self.clientDict[self.nickname] = threadQueue
+                    self.clientDict[self.nickname] = self.threadQueue
                     logMessage = self.nickname + " has joined."
                 # daha once login olduysa reddedecek
                 else:
@@ -76,7 +74,7 @@ class myReadThread (threading.Thread):
                 # fihristi gezip key'leri(nickname) client degiskenine ekleyecek
                 for key in self.clientDict.keys():
                     clients += key + ":"
-                clients = clients[:-1]  # sondaki fazla :'yi siliyoruz
+                clients = clients[:-1]
                 response = "LSA " + clients
             # baglantiyi kontrol etmek istiyorsa
             elif data[0:3] == "TIC":
@@ -84,7 +82,6 @@ class myReadThread (threading.Thread):
 
             # genel mesaj gondermek istiyorsa
             elif data[0:3] == "SAY":
-                print "client SAY dedi"
                 for key in self.clientDict.keys():
                     if key != self.nickname:
                         self.clientDict[key].put(data)
@@ -92,7 +89,6 @@ class myReadThread (threading.Thread):
 
             # ozel mesaj gondermek istiyorsa
             elif data[0:3] == "MSG":
-                print "client MSG dedi"
                 key, message = str.split(data[4:], ":", 1)
                 if key not in self.clientDict.keys():
                     response = "MNO"
@@ -110,48 +106,37 @@ class myReadThread (threading.Thread):
     def run(self):
         logQueue.put('Starting myReadThread-' + str(self.threadID))
         while True:
-            try:
-                try:
-                    data = self.clientSocket.recv(buff)
-                except:
-                    data = ""
-                if data:
-                    response, logMessage = self.parser(data)
-                    if response:
-                            self.threadQueue.put(response)
-                    if logMessage:
-                            logQueue.put(logMessage)
-            except:
-                logQueue.put('Connection lost. Ending myReadThread-' + str(self.threadID) + "\n")
-                break
-        self.clientSocket.close()
-        logQueue.put('Connection closed.' + "\n")
+            data = self.clientSocket.recv(buff)
+            print "Server'a gelen data: " + data
+            response, logMessage = self.parser(data)
+            if logMessage:
+                logQueue.put(logMessage)
+            if response:
+                self.threadQueue.put(response)
 
 ''' ------------------------------------------- MYWRITETHREAD -------------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------------ '''
 # kuyruk dinliyor
 class myWriteThread (threading.Thread):
-    def __init__(self, threadID, clientSocket, clientAddr, threadQueue, clientDict):
+    def __init__(self, threadID, clientSocket, clientAddr, clientDict):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.clientSocket = clientSocket
         self.clientAddr = clientAddr
-        self.threadQueue = threadQueue
         self.clientDict = clientDict
     def run(self):
         logQueue.put('Starting myWriteThread-' + str(self.threadID))
         acceptedList = ['HEL', 'REJ', 'BYE', 'LSA', 'TOC', 'SOK', 'MOK', 'MNO', 'ERR', 'ERL']
         while True:
-            # Kuyrukta mesaj varsa
-            if self.threadQueue.qsize() > 0:
-                queueMessage = self.threadQueue.get()
-                if queueMessage[0:3] not in acceptedList:
-                    # gonderilen ozel mesaj ve ya genel mesajsa
-                    messageToSend = queueMessage[4:]
-                # hicbiri degilse sistem mesajidi
-                else:
-                    messageToSend = queueMessage
-                self.clientSocket.send(messageToSend)
+            queueMessage = str(threadQueue.get())
+            # gonderilen ozel mesaj ve ya genel mesajsa
+            if queueMessage[0:3] not in acceptedList:
+                messageToSend = queueMessage[4:]
+            # ozel ya da genel mesaj degilse
+            else:
+                messageToSend = queueMessage
+            print "Server'dan gonderilen data: " + messageToSend
+            self.clientSocket.send(messageToSend)
         logQueue.put("Exiting myWriteThread-" + self.threadID + "\n")
   
         
@@ -170,7 +155,6 @@ s.bind((host, port))            # bind islemi gerceklestirilir
 s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
 
 # logThread'i yaratip, thread listesine ekleyip baslatiyoruz
-lqueue = Queue.Queue()
 logThread = myLogThread("log.txt")
 threads.append(logThread)
 logThread.start()
@@ -183,10 +167,12 @@ while True:
 
     threadCounter += 1
     readThread = myReadThread(threadCounter, c, addr, threadQueue, clientDict)
+    readThread.daemon = True
     threads.append(readThread)
     readThread.start()
 
-    writeThread = myWriteThread(threadCounter, c, addr, threadQueue, clientDict)
+    writeThread = myWriteThread(threadCounter, c, addr, clientDict)
+    writeThread.daemon = True
     threads.append(writeThread)
     writeThread.start()
     
