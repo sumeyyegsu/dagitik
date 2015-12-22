@@ -32,7 +32,7 @@ class myNegotiatorClientThread (threading.Thread):
         global CONNECT_POINT_LIST
         value = CONNECT_POINT_LIST.get(self.peerAddr)
         try:
-            pointTime = str.split(value, "-")[1] #N-10:00 ornegin, zamani aliyoruz
+            pointTime = str.split(value, ":")[1] #N-W:123456 ornegin, zamani(123456) aliyoruz
             currentTime = time.time()
             # simdiki zaman x ise ve en son x-10 da cevap vermisse, tekrar hello diyoruz.
             if ((currentTime - pointTime) == 600):
@@ -53,7 +53,7 @@ class myNegotiatorClientThread (threading.Thread):
                         # if value[1] == "W":
                         #     value[1] == "S"
                         #Statu'sunu S yapip, time'ini guncelliyoruz.
-                        CONNECT_POINT_LIST.get(self.peerAddr) == value[:2] + "S" + currentTime
+                        CONNECT_POINT_LIST.get(self.peerAddr) == value[:2] + "S:" + currentTime
                 except socket.timeout:
                     self.peerSocket.close()
             # son 10 dakkadan uzun bir suredir cevap gelmemisse, close diyoruz.
@@ -78,7 +78,7 @@ class myNegotiatorClientThread (threading.Thread):
 #buffer buyuklugu
 buff = 12345
 # Baglanti listesi
-CONNECT_POINT_LIST = {} #{[addr1,type1-Stime1],[addr2,type2-Wtime2],...}
+CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...}
 #thread listesi
 threads = []
 # kilit mekanizmasi
