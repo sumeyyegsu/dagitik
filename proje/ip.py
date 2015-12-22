@@ -31,7 +31,7 @@ class WorkerThread (threading.Thread):
         self.pLock = pLock
         self.patchsize = 128
 
-    def convertGray(self, header, patch):
+    def grayScaleFilter(self, header, patch):
         # convert the patch to gray (actually does nothing as the incoming
         # data is already 8bit grayscale data)
         newMessage = [0] * self.patchsize * self.patchsize
@@ -39,7 +39,7 @@ class WorkerThread (threading.Thread):
             newMessage[i] = patch[i]
         return (header, newMessage)
 
-    def filterSobel(self, header, patch, threshold):
+    def sobelFilter(self, header, patch, threshold):
         # convolve the patch with the matrix [[1,0,-1],[2,0,-2][1,0,-1]]
         # read how the convolution is applied in discrete domain
         newMessage = [0] * self.patchsize * self.patchsize
@@ -72,6 +72,12 @@ class WorkerThread (threading.Thread):
                 #     newMessage[index0] = 0
         return (header, newMessage)
 
+        def binarizeFilter(self, header, patch):
+            print "binarizeFilter"
+        def prewittFilter(self, header, patch):
+            print "prewittFilter"
+        def gaussianFilter(self, header, patch):
+            print "gaussianFilter"
 
     def run(self):
         print self.name + ": Starting."
@@ -84,11 +90,16 @@ class WorkerThread (threading.Thread):
                 print self.name + ": " + str(message[0][0]) + \
                     " " + str(message[0][1]) + " Queue size: " \
                       + str(self.inQueue.qsize())
-                if str(message[0][0]) == "SobelFilter":
-                    outMessage = self.filterSobel(message[0][1], message[1],
-                                                  128)
-                if str(message[0][0]) == "GrayScale":
-                    outMessage = self.convertGray(message[0][1], message[1])
+                if str(message[0][0]) == "Gray Scale Filter":
+                    outMessage = self.grayScaleFilter(message[0][1], message[1])
+                if str(message[0][0]) == "Sobel Filter":
+                    outMessage = self.sobelFilter(message[0][1], message[1], 128)
+                if str(message[0][0]) == "Binarize Filter":
+                    outMessage = self.binarizeFilter(message[0][1], message[1])
+                if str(message[0][0]) == "Prewitt Filter":
+                    outMessage = self.prewittFilter(message[0][1], message[1])
+                if str(message[0][0]) == "Gaussian Filter":
+                    outMessage = self.gaussianFilter(message[0][1], message[1])
                 # self.pLock.acquire()
                 self.outQueue.put(outMessage)
                 # self.pLock.release()
@@ -113,8 +124,11 @@ class imGui(QMainWindow):
         self.patchsize = 128
 
         # fill combobox
-        self.ui.boxFunction.addItem("GrayScale")
-        self.ui.boxFunction.addItem("SobelFilter")
+        self.ui.boxFunction.addItem("Gray Scale Filter")
+        self.ui.boxFunction.addItem("Sobel Filter")
+        self.ui.boxFunction.addItem("Binarize Filter")
+        self.ui.boxFunction.addItem("Prewitt Filter")
+        self.ui.boxFunction.addItem("Gaussian Filter")
 
         # connect buttons
         self.ui.buttonLoadImage.clicked.connect(self.loadImagePressed)
