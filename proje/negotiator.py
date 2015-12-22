@@ -49,11 +49,8 @@ class myNegotiatorClientThread (threading.Thread):
                             del CONNECT_POINT_LIST[self.peerAddr]
                     # Eger SALUT cevabi gelmisse, last seen'ini update ediyoruz.k
                     else:
-                        #statusu W ise onu S e ceviriyoruz.
-                        # if value[1] == "W":
-                        #     value[1] == "S"
                         #Statu'sunu S yapip, time'ini guncelliyoruz.
-                        CONNECT_POINT_LIST.get(self.peerAddr) == value[:2] + "S:" + currentTime
+                        CONNECT_POINT_LIST[self.peerAddr] = value[:2] + "S:" + currentTime
                 except socket.timeout:
                     self.peerSocket.close()
             # son 10 dakkadan uzun bir suredir cevap gelmemisse, close diyoruz.
