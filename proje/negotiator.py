@@ -1,16 +1,9 @@
 __author__ = 'sumeyye'
 
-from pyGraphics_ui import Ui_ImageProcessor
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-import sys
-import numpy as np
-import math
 import threading
 import socket
 import Queue
 import time
-import copy
 
 
 ''' ------------------------------------------- NEGOTIATOR CLIENT THREAD ---------------------------------------- '''
@@ -26,8 +19,8 @@ class myNegotiatorClientThread (threading.Thread):
         self.peerAddr = peerAddr
         self.workQueue = workQueue
         self.processedQueue = processedQueue
-
-     def run(self):
+        
+    def run(self):
         global CONNECT_POINT_LIST
         value = CONNECT_POINT_LIST.get(self.peerAddr)
         try:
@@ -90,7 +83,7 @@ class myNegotiatorServerThread (threading.Thread):
         self.workQueue = workQueue
         self.processedQueue = processedQueue
 
-     def run(self):
+    def run(self):
         global CONNECT_POINT_LIST
         value = CONNECT_POINT_LIST[self.peerAddr]
         try:
