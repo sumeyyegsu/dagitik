@@ -72,8 +72,17 @@ class WorkerThread (threading.Thread):
                 #     newMessage[index0] = 0
         return (header, newMessage)
 
-        def binarizeFilter(self, header, patch):
-            print "binarizeFilter"
+    def binarizeFilter(self, header, patch):
+        # patch'de bulunan her nokta icin,
+        # 0-126 arasi degerleri 0'a, 167-255 arasi degerleri 1'e cekiyoruz.
+        newMessage = [0] * self.patchsize * self.patchsize
+        for i in range(0, self.patchsize * self.patchsize):
+            if patch[i] < 127 :
+                newMessage[i] = 0
+            else:
+                newMessage[i] = 255
+        return (header, newMessage)
+        
         def prewittFilter(self, header, patch):
             print "prewittFilter"
         def gaussianFilter(self, header, patch):
