@@ -160,6 +160,8 @@ s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugu
 while True:
 
     c, addr = s.accept()
+    print 'SERVER: Got a connection from ' + str(addr)
+    
     workQueue = Queue.Queue()
     processedQueue = Queue.Queue()
 
@@ -167,9 +169,6 @@ while True:
     negotiatorClientThread = myNegotiatorClientThread(c, addr, CONNECT_POINT_LIST, workQueue, processedQueue)
     threads.append(negotiatorClientThread)
     negotiatorClientThread.start()
-
-    app = imGui(workQueue,processedQueue, pLock)
-    app.run()
 
 for a in range(0,threadCounter):
     workQueue.put("END")
