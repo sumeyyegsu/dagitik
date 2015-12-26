@@ -5,9 +5,28 @@ import socket
 import Queue
 import time
 import copy
+from time import strftime
 
 # TODO: timeout ile ilgilenme.
 # TODO: <type> hakkinda tekrar dusunme. Gereksiz olabilir, gereksizse sistemden type bilgisini cikarma.
+
+''' --------------------------------------- NEGOTIATOR CLIENT THREAD -------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Bu threadin gorevi: Negotiator-Client calistigi sure boyunca, UPDATE_INTERVAL araliginda, tum baglantilari kontrol
+# edip CONNECTION_POINT_LIST'i guncellenmeye calisilirken, her baglantiyi tek tek kontrol etmek.
+# arabulucu - istemci tarafi
+class myNegotiatorClientThread (threading.Thread):
+    def __init__(self, threadQueue):
+        threading.Thread.__init__(self)
+        self.threadQueue = threadQueue
+    def run(self):
+        print "C_NEGOTIATOR:  myNegotiatorClientThread Yaratildi."
+        while True:
+            time.sleep(UPDATE_INTERVAL)
+            for peerAddr in CONNECT_POINT_LIST.keys():
+                testPeerConnectionThread = myTestPeerConnectionThread(peerAddr)
+                testPeerConnectionThread.start()
+            print "C_NEGOTIATOR: " + strftime("%m/%d/%Y %H:%M:%S") +" | CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
 ''' ---------------------------------------- TEST PEER CONNECTION THREAD ---------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
@@ -24,12 +43,12 @@ class myTestPeerConnectionThread(threading.Thread):
         s = socket.socket() #baglanti testi icin soket aciyoruz
         temporaryList = CONNECT_POINT_LIST.copy() #listenin bir kopyasini temporaryList'e atiyoruz.
         try:
-            s.connect(CONNECT_POINT_LIST[self.peerAddr][0], CONNECT_POINT_LIST[self.peerAddr][1]) #ip,port a baglaniyoruz.
+            s.connect((CONNECT_POINT_LIST[self.peerAddr][0], CONNECT_POINT_LIST[self.peerAddr][1])) #ip,port a baglaniyoruz.
             s.send("HELLO")
             print "C_NEGOTIATOR: HELLO gonderildi."
             try:
                 response1 = s.recv(buff)
-                print "C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response)
+                print "C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response1)
                 # SALUT'den baska bir cevap gelmisse eger
                 # CMDER yolluyoruz, connection'i kapatip listeden dusuruyoruz.
                 if response1[:5] != "SALUT":
@@ -84,21 +103,28 @@ class myTestPeerConnectionThread(threading.Thread):
             s.close()
         CONNECT_POINT_LIST = copy.deepcopy(temporaryList)
         
-''' --------------------------------------- NEGOTIATOR CLIENT THREAD ------------------------------------------- '''
-# Bu threadin gorevi: Negotiator-Client calistigi sure boyunca, UPDATE_INTERVAL araliginda, tum baglantilari kontrol
-# edip CONNECTION_POINT_LIST'i guncellenmeye calisilirken, her baglantiyi tek tek kontrol etmek.
-class myNegotiatorClientThread (threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-    def run(self):
-        print "C_NEGOTIATOR:  myNegotiatorClientThread Yaratildi."
-        while True:
-            time.sleep(UPDATE_INTERVAL)
-            for peerAddr in CONNECT_POINT_LIST.keys():
-                testPeerConnectionThread = myTestPeerConnectionThread(peerAddr)
-                testPeerConnectionThread.start()
-            print "C_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
+''' -----------------------------------NEGOTIATOR SERVER THREAD-------------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Arabulucu - sunucu tarafi
+class myNegotiatorServerThread (threading.Thread):
+    def __init__(self, threadQueue):
+        threading.Thread.__init__(self)
+        self.threadQueue = threadQueue
+        self.port = 1000                # dinleyecegi port numarasi
+        self.host = "127.0.0.1"         # sunucunun adresi
+    def run(self):
+        print "S_NEGOTIATOR:  myNegotiatorServerThread Yaratildi."
+        s = socket.socket()             # socket yaratiyoruz
+        print "S_NEGOTIATOR: Soket yaratildi."
+        s.bind((self.host, self.port))  # bind islemi gerceklestirilir
+        s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
+        while True:
+            c,addr = s.accept()
+            print "S_NEGOTIATOR: " + str(addr)  + "'den/dan baglanti geldi."
+            print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+            negotiatorServerReceiveThread = myNegotiatorServerReceiveThread(c, addr, self.threadQueue)
+            negotiatorServerReceiveThread.start()
         
 ''' -------------------------------------- NEGOTIATOR SERVER RECEIVE THREAD ------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
@@ -112,19 +138,18 @@ class myNegotiatorClientThread (threading.Thread):
 #                   <ip>:<port>:<time>:<type>
 #                   ...
 #                   NLIST END
-#Es-istemcilerinin arabulucu sunucudan beklentileri diger eslerin baglantı bilgileridir.
+#Es-istemcilerinin arabulucu sunucudan beklentileri diger eslerin baglanti bilgileridir.
 
 class myNegotiatorServerReceiveThread(threading.Thread):
-    def __init__(self, threadID, peerSocket, peerAddr, threadQueue):
+    def __init__(self, peerSocket, peerAddr, threadQueue):
         threading.Thread.__init__(self)
-        self.threadID = threadID
         self.peerSocket = peerSocket
         self.peerAddr = peerAddr
         self.threadQueue = threadQueue
 
     def run(self):
         global CONNECT_POINT_LIST
-        print "S_NEGOTIATOR: Server Thread Yaratildi."
+        print "S_NEGOTIATOR: myNegotiatorServerReceiveThread Yaratildi."
         print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
         while True:
             try:
@@ -209,16 +234,9 @@ buff = 2048
 # Baglanti listesi
 CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...}
 # CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
-UPDATE_INTERVAL = 60
+UPDATE_INTERVAL = 20
 # kilit mekanizmasi
 pLock = threading.Lock()
-
-s = socket.socket()             # socket yaratiyoruz
-print "NEGOTIATOR: Socket created."
-host = socket.gethostname()     # sunucunun adresi
-port = 10000                    # dinleyecegi port numarasi
-s.bind((host, port))            # bind islemi gerceklestirilir
-s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
 
 ''' --------------------------------------------------- MAIN ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
@@ -226,16 +244,14 @@ def main():
 
     threadQueue = Queue.Queue()
 
-    c, addr = s.accept()
-    print "NEGOTIATOR: Got a connection from " + str(addr)
-    print "NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-
-    negotiatorClientThread = myNegotiatorClientThread(c, addr, CONNECT_POINT_LIST, threadQueue)
+    negotiatorClientThread = myNegotiatorClientThread(threadQueue)
     negotiatorClientThread.start()
 
-    negotiatorServerThread = myNegotiatorServerThread(c, addr, CONNECT_POINT_LIST, threadQueue)
+    negotiatorServerThread = myNegotiatorServerThread(threadQueue)
     negotiatorServerThread.start()
 
     negotiatorClientThread.join()
     negotiatorServerThread.join()
 
+if __name__ == '__main__':
+    main()
