@@ -154,8 +154,9 @@ class myNegotiatorServerReceiveThread(threading.Thread):
         while True:
             try:
                 receivedData = self.peerSocket.recv(buff)
-                print "S_NEGOTIATOR: Alinan veri: " + receivedData
-                self.parser(receivedData)
+                if receivedData != "":
+                    print "S_NEGOTIATOR: Alinan veri: " + receivedData
+                    self.parser(receivedData)
             except socket.timeout:
                 self.peerSocket.close()
                 break
