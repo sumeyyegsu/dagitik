@@ -32,7 +32,7 @@ class myTestPeerConnectionThread(threading.Thread):
                 print "C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response)
                 # SALUT'den baska bir cevap gelmisse eger
                 # CMDER yolluyoruz, connection'i kapatip listeden dusuruyoruz.
-                if response1 != "SALUT":
+                if response1[:5] != "SALUT":
                     print "C_NEGOTIATOR: HELLO'ya gelen cevap SALUT'den farklidir."
                     s.send("CMDER")
                     print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
@@ -63,7 +63,7 @@ class myTestPeerConnectionThread(threading.Thread):
                 print "C_NEGOTIATOR: Gonderilen CLOSE'a alinan cevap: " + str(response2)
                 # BUBYE'den baska bir cevap gelmisse eger
                 # CMDER yolluyoruz
-                if response2 != "BUBYE":
+                if response2[:5] != "BUBYE":
                     print "C_NEGOTIATOR: CLOSE'a gelen cevap BUBYE'den farklidir."
                     s.send("CMDER")
                     print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
@@ -100,7 +100,7 @@ class myNegotiatorClientThread (threading.Thread):
             print "C_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
         
-''' ------------------------------------------- NEGOTIATOR SERVER THREAD ---------------------------------------- '''
+''' -------------------------------------- NEGOTIATOR SERVER RECEIVE THREAD ------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 
 
@@ -114,14 +114,16 @@ class myNegotiatorClientThread (threading.Thread):
 #                   NLIST END
 #Es-istemcilerinin arabulucu sunucudan beklentileri diger eslerin baglantı bilgileridir.
 
-class myNegotiatorServerThread(threading.Thread):
-    def __init__(self, threadID, peerSocket, peerAddr):
+class myNegotiatorServerReceiveThread(threading.Thread):
+    def __init__(self, threadID, peerSocket, peerAddr, threadQueue):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.peerSocket = peerSocket
         self.peerAddr = peerAddr
+        self.threadQueue = threadQueue
 
     def run(self):
+        global CONNECT_POINT_LIST
         print "S_NEGOTIATOR: Server Thread Yaratildi."
         print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
         while True:
@@ -129,7 +131,7 @@ class myNegotiatorServerThread(threading.Thread):
                 receivedData = self.peerSocket.recv(buff)
                 print "S_NEGOTIATOR: Alinan veri: " + receivedData
                 self.parser(receivedData)
-            except socket.error:
+            except socket.timeout:
                 self.peerSocket.close()
                 break
 
@@ -137,12 +139,12 @@ class myNegotiatorServerThread(threading.Thread):
         print "S_NEGOTIATOR: parser calisiyor. Alinan data: " + receivedData
         receivedData = receivedData.strip()
         # herhangi bir uc'tan HELLO gelirse SALUT cevabini yolluyoruz.
-        if (receivedData == "HELLO"):
+        if (receivedData[:5] == "HELLO"):
             print "S_NEGOTIATOR: Alinan veri HELLO -> SALUT cevabi gonderiliyor."
             self.peerSocket.send("SALUT")
 
         # herhangi bir birimden CLOSE gelirse, BUBYE deyip baglantimizi kapatiyoruz.
-        elif (receivedData == "CLOSE"):
+        elif (receivedData[:5] == "CLOSE"):
             print "S_NEGOTIATOR: Alinan veri CLOSE -> BUBYE cevabi gonderiliyor."
             self.peerSocket.send("BUBYE")
             print "S_NEGOTIATOR: Baglanti kapatiliyor."
@@ -153,51 +155,32 @@ class myNegotiatorServerThread(threading.Thread):
                 print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
         # REGME komutu geldiyse
-        elif (receivedData == "REGME"):
-            try:
-                print "S_NEGOTIATOR: REGME istegi geldi." \
-                        "Bilirim guldurmez devr-i alemde," \
-                        "Bir gunumu yuz bin zara yazmislar..."
-                host, port = str.split(receivedData[6:], ':', 1)
-                print "S_NEGOTIATOR: Alinan veri: " + receivedData
-                value = CONNECT_POINT_LIST[host + port]
-                # peer listede zaten varsa
-                if host + port in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
-                    print "S_NEGOTIATOR: " + host + port + " listede zaten varsa status'u S yapilir."
-                    if value[2] == "S":
-                        value[3:] = ":" + str(time.time())
-                        print "S_NEGOTIATOR: " + "REGOK " + str(value[4:]) + " gonderilir."
-                        self.peerSocket.send("REGOK " + str(value[4:]))
-                    print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-                # peer listede yoksa
-                else:
-                    print "S_NEGOTIATOR: " + host + port + " listede yoksa, status'u W ile eklenir."
-                    # kaydi beklemeye aliyoruz
-                    print "S_NEGOTIATOR: REGWA gonderildi."
-                    self.peerSocket.send("REGWA")
-                    CONNECT_POINT_LIST[host + port] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
-                    print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-                    print "S_NEGOTIATOR: Baglanti kapatiliyor."
-                    self.peerSocket.close()
-            except:
-                self.peerSocket.send("REGER")
-                print "S_NEGOTIATOR: REGER gonderildi. - Baglanti kapatiliyor."
+        elif (receivedData[:5] == "REGME"):
+            print "S_NEGOTIATOR: REGME istegi geldi."
+            host, port = str.split(receivedData[6:], ':', 1)
+            print "S_NEGOTIATOR: Alinan veri: " + receivedData
+            value = CONNECT_POINT_LIST[host + port]
+            # peer listede zaten varsa
+            if host + port in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
+                print "S_NEGOTIATOR: " + host + port + " listede zaten varsa status'u S yapilir."
+                if value[2] == "S":
+                    value[3:] = ":" + str(time.time())
+                    print "S_NEGOTIATOR: " + "REGOK " + str(value[4:]) + " gonderilir."
+                    self.peerSocket.send("REGOK " + str(value[4:]))
+                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+            # peer listede yoksa
+            else:
+                print "S_NEGOTIATOR: " + host + port + " listede yoksa, status'u W ile eklenir."
+                # kaydi beklemeye aliyoruz
+                print "S_NEGOTIATOR: REGWA gonderildi."
+                self.peerSocket.send("REGWA")
+                CONNECT_POINT_LIST[host + port] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
+                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+                print "S_NEGOTIATOR: Baglanti kapatiliyor."
                 self.peerSocket.close()
 
-
-        # REGWA komutu geldiyse ??tekrar bakicalacak
-        elif (receivedData == "REGWA"):
-            host, port = str.split(receivedData[6:], ':', 1)
-            value = CONNECT_POINT_LIST[host + port]
-            print "S_NEGOTIATOR: REGWA geldi hos geldi. Leylim leeeeey."
-            # time'i guncelliyoruz (P-W:123132) (gonderen peer'in)
-            CONNECT_POINT_LIST[self.peerAddr] = value[:4] + str(time.time())
-            print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-            # eksik ???????
-
-
         # GETNL : negotiator'in listesi istendiyse
-        elif (receivedData == "GETNL"):
+        elif (receivedData[:5] == "GETNL"):
             nlsize = int(receivedData[6:])
             print "S_NEGOTIATOR: GETNL geldi. nlsize: " + str(nlsize)
             self.peerSocket.send("NLIST BEGIN\n")
@@ -213,6 +196,12 @@ class myNegotiatorServerThread(threading.Thread):
             self.peerSocket.send("NLIST END")
             print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST END"
             print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+        #diger tum durumlarda   
+        else:
+            print "S_NEGOTIATOR: CMDER gonderiliyor."
+            self.peerSocket.send("CMDER")
+            print "S_NEGOTIATOR: Baglanti kapatiliyor."
+            self.peerSocket.close()
 
     
 #buffer buyuklugu
