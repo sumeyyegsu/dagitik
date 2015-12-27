@@ -36,6 +36,8 @@ class myTestPeerConnectionThread(threading.Thread):
     def __init__(self, peerAddr):
         threading.Thread.__init__(self)
         self.peerAddr = peerAddr
+        self.peerHost = str(self.peerAddr[0])
+        self.peerPort = int(self.peerAddr[1])
 
     def run(self):
         global CONNECT_POINT_LIST
@@ -43,7 +45,9 @@ class myTestPeerConnectionThread(threading.Thread):
         s = socket.socket() #baglanti testi icin soket aciyoruz
         temporaryList = CONNECT_POINT_LIST.copy() #listenin bir kopyasini temporaryList'e atiyoruz.
         try:
-            s.connect((CONNECT_POINT_LIST[self.peerAddr][0], CONNECT_POINT_LIST[self.peerAddr][1])) #ip,port a baglaniyoruz.
+            print "C_NEGOTIATOR: ip: " + self.peerHost + ", port: " + str(self.peerPort) + "."
+            s.connect((self.peerHost, self.peerPort)) #ip,port a baglaniyoruz.
+            print "C_NEGOTIATOR: " + self.peerHost + ", " + str(self.peerPort) + "  -> ile baglanti kuruldu."
             s.send("HELLO")
             print "C_NEGOTIATOR: HELLO gonderildi."
             try:
@@ -58,7 +62,7 @@ class myTestPeerConnectionThread(threading.Thread):
                     # Listede hala var gorunuyorsa, listeden dusuruyoruz.
                     if self.peerAddr in temporaryList.keys():
                         print "C_NEGOTIATOR: HELLO'ya karsilik SALUT'den baska bir cevap yollayan peer, listeden silinir."
-                        del CONNECT_POINT_LIST[self.peerAddr]
+                        CONNECT_POINT_LIST.pop(self.peerAddr)
                         print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
                 # Eger SALUT cevabi gelmisse, last seen'ini update ediyoruz.
                 else:
@@ -71,7 +75,7 @@ class myTestPeerConnectionThread(threading.Thread):
                 print "C_NEGOTIATOR: Peer baglantisini kapatti."
             except socket.timeout:
                 print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
-                del temporaryList[self.peerAddr]
+                temporaryList.pop(self.peerAddr)
                 print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor."
                 s.close()
             
@@ -88,17 +92,17 @@ class myTestPeerConnectionThread(threading.Thread):
                     print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
                     if self.peerAddr in temporaryList.keys():
                         print "C_NEGOTIATOR: CLOSE'a karsilik BUBYE'dan baska bir cevap yollayan peer listeden silinir."
-                        del temporaryList[self.peerAddr]
+                        temporaryList.pop(self.peerAddr)
                         print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
             except socket.timeout:
                 print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
-                del temporaryList[self.peerAddr]
+                temporaryList.pop(self.peerAddr)
                 print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
                 s.close()
             
         except :
             print "C_NEGOTIATOR: Bir sorun olustu. Baglanti kapatiliyor. Peer listeden siliniyor."
-            del temporaryList[self.peerAddr]
+            temporaryList.pop(self.peerAddr)
             print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
             s.close()
         CONNECT_POINT_LIST = copy.deepcopy(temporaryList)
@@ -184,11 +188,11 @@ class myNegotiatorServerReceiveThread(threading.Thread):
         elif (receivedData[:5] == "REGME"):
             print "S_NEGOTIATOR: REGME istegi geldi."
             host, port = str.split(receivedData[6:], ':', 1)
-            print "S_NEGOTIATOR: Alinan veri: " + receivedData
-            value = CONNECT_POINT_LIST[host + port]
+            port = int(port)
             # peer listede zaten varsa
-            if host + port in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
-                print "S_NEGOTIATOR: " + host + port + " listede zaten varsa status'u S yapilir."
+            if (host, port) in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
+                value = CONNECT_POINT_LIST[(host, port)]
+                print "S_NEGOTIATOR: " + host + str(port) + " listede zaten varsa status'u S yapilir."
                 if value[2] == "S":
                     value[3:] = ":" + str(time.time())
                     print "S_NEGOTIATOR: " + "REGOK " + str(value[4:]) + " gonderilir."
@@ -196,11 +200,11 @@ class myNegotiatorServerReceiveThread(threading.Thread):
                 print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
             # peer listede yoksa
             else:
-                print "S_NEGOTIATOR: " + host + port + " listede yoksa, status'u W ile eklenir."
+                print "S_NEGOTIATOR: " + host + ", " + str(port) + " listede yoksa, status'u W ile eklenir."
                 # kaydi beklemeye aliyoruz
                 print "S_NEGOTIATOR: REGWA gonderildi."
                 self.peerSocket.send("REGWA")
-                CONNECT_POINT_LIST[host + port] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
+                CONNECT_POINT_LIST[(host, port)] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
                 print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
                 print "S_NEGOTIATOR: Baglanti kapatiliyor."
                 self.peerSocket.close()
@@ -233,7 +237,7 @@ class myNegotiatorServerReceiveThread(threading.Thread):
 #buffer buyuklugu
 buff = 2048
 # Baglanti listesi
-CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...}
+CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...} yani KEY = (host,port) ve VALUE = type-status:time
 # CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
 UPDATE_INTERVAL = 20
 # kilit mekanizmasi
