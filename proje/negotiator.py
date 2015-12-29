@@ -215,7 +215,7 @@ class myLogThread (threading.Thread):
 #buffer buyuklugu
 buff = 2048
 # Baglanti listesi
-CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...} yani KEY = (host,port) ve VALUE = type-status:time
+CONNECT_POINT_LIST = {} #{[addr1,S:time1],[addr2,W:time2],...} yani KEY = (host,port) ve VALUE = status:time
 # CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
 UPDATE_INTERVAL = 20
 # kilit mekanizmasi
