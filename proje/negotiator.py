@@ -93,7 +93,7 @@ class myTestPeerConnectionThread(threading.Thread):
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # Arabulucu - sunucu tarafi:
 class myNegotiatorServerThread (threading.Thread):
-    def __init__(self, threadQueue):
+    def __init__(self):
         threading.Thread.__init__(self)
         self.port = 10000               # dinleyecegi port numarasi
         self.host = "127.0.0.5"         # sunucunun adresi
@@ -114,7 +114,7 @@ class myNegotiatorServerThread (threading.Thread):
 ''' ------------------------------------------------------------------------------------------------------------- '''
 
 class myNegotiatorServerReceiveThread(threading.Thread):
-    def __init__(self, peerSocket, peerAddr, threadQueue):
+    def __init__(self, peerSocket, peerAddr):
         threading.Thread.__init__(self)
         self.peerSocket = peerSocket
         self.peerAddr = peerAddr
