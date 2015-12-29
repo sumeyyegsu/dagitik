@@ -192,12 +192,12 @@ class myNegotiatorServerReceiveThread(threading.Thread):
             # peer listede zaten varsa
             if (host, port) in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
                 value = CONNECT_POINT_LIST[(host, port)]
-                print "S_NEGOTIATOR: " + host + str(port) + " listede zaten varsa status'u S yapilir."
-                if value[2] == "S":
-                    value[3:] = ":" + str(time.time())
-                    print "S_NEGOTIATOR: " + "REGOK " + str(value[4:]) + " gonderilir."
-                    self.peerSocket.send("REGOK " + str(value[4:]))
-                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+                print "S_PEER: " + host + str(port) + " listede zaten varsa status'u her durumda S yapilir."
+                value[2:] = "S:" + str(time.time())
+                CONNECT_POINT_LIST[(host, port)] = value
+                print "S_PEER: " + "REGOK " + str(value[4:]) + " gonderilir."
+                self.peerSocket.send("REGOK " + str(value[4:]))
+                print "S_PEER: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
             # peer listede yoksa
             else:
                 print "S_NEGOTIATOR: " + host + ", " + str(port) + " listede yoksa, status'u W ile eklenir."
