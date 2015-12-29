@@ -5,33 +5,29 @@ import socket
 import Queue
 import time
 import copy
-from time import strftime
-
-# TODO: timeout ile ilgilenme.
-# TODO: <type> hakkinda tekrar dusunme. Gereksiz olabilir, gereksizse sistemden type bilgisini cikarma.
 
 ''' --------------------------------------- NEGOTIATOR CLIENT THREAD -------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-# Bu threadin gorevi: Negotiator-Client calistigi sure boyunca, UPDATE_INTERVAL araliginda, tum baglantilari kontrol
-# edip CONNECTION_POINT_LIST'i guncellenmeye calisilirken, her baglantiyi tek tek kontrol etmek.
-# arabulucu - istemci tarafi
+# Bu threadin gorevi: Negotiator'in calistigi sure boyunca, UPDATE_INTERVAL araliginda, tum baglantilari kontrol
+# edip CONNECTION_POINT_LIST'i guncellemek.
+# Arabulucu - istemci tarafinda calisan thread:
 class myNegotiatorClientThread (threading.Thread):
-    def __init__(self, threadQueue):
+    def __init__(self):
         threading.Thread.__init__(self)
-        self.threadQueue = threadQueue
     def run(self):
-        print "C_NEGOTIATOR:  myNegotiatorClientThread Yaratildi."
+        logQueue.put("C_NEGOTIATOR:  myNegotiatorClientThread yaratildi.")
         while True:
             time.sleep(UPDATE_INTERVAL)
             for peerAddr in CONNECT_POINT_LIST.keys():
                 testPeerConnectionThread = myTestPeerConnectionThread(peerAddr)
                 testPeerConnectionThread.start()
-            print "C_NEGOTIATOR: " + strftime("%m/%d/%Y %H:%M:%S") +" | CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+            logQueue.put("C_NEGOTIATOR: " + "CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
 
 ''' ---------------------------------------- TEST PEER CONNECTION THREAD ---------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-# Ip/Port ikilisine gore, test edilecek birim icin yaratilan thread.
+# Ip/Port ikilisine gore, test edilecek peer/negotiator icin yaratilan threaddir.
 # Baglantiyi test edip ona gore, CONNECT_POIN_LIST'i guncelliyor.
+# Baglantiyi test eden thread:
 class myTestPeerConnectionThread(threading.Thread):
     def __init__(self, peerAddr):
         threading.Thread.__init__(self)
@@ -41,199 +37,181 @@ class myTestPeerConnectionThread(threading.Thread):
 
     def run(self):
         global CONNECT_POINT_LIST
-        print "C_NEGOTIATOR: myTestPeerConnectionThread Yaratildi."
-        s = socket.socket() #baglanti testi icin soket aciyoruz
-        temporaryList = CONNECT_POINT_LIST.copy() #listenin bir kopyasini temporaryList'e atiyoruz.
+        logQueue.put("C_NEGOTIATOR: myTestPeerConnectionThread yaratildi.")
+        s = socket.socket() 
+        s.settimeout(int(UPDATE_INTERVAL/5))
+        temporaryList = CONNECT_POINT_LIST.copy() 
         try:
-            print "C_NEGOTIATOR: ip: " + self.peerHost + ", port: " + str(self.peerPort) + "."
-            s.connect((self.peerHost, self.peerPort)) #ip,port a baglaniyoruz.
-            print "C_NEGOTIATOR: " + self.peerHost + ", " + str(self.peerPort) + "  -> ile baglanti kuruldu."
+            s.connect((self.peerHost, self.peerPort))
+            logQueue.put("C_NEGOTIATOR: (" + self.peerHost + ", " + str(self.peerPort) + ") ile baglanti kuruldu.")
+
             s.send("HELLO")
-            print "C_NEGOTIATOR: HELLO gonderildi."
+            logQueue.put("C_NEGOTIATOR: HELLO gonderildi.")
             try:
                 response1 = s.recv(buff)
-                print "C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response1)
-                # SALUT'den baska bir cevap gelmisse eger
-                # CMDER yolluyoruz, connection'i kapatip listeden dusuruyoruz.
+                logQueue.put("C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response1))
                 if response1[:5] != "SALUT":
-                    print "C_NEGOTIATOR: HELLO'ya gelen cevap SALUT'den farklidir."
                     s.send("CMDER")
-                    print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
-                    # Listede hala var gorunuyorsa, listeden dusuruyoruz.
+                    logQueue.put("C_NEGOTIATOR: CMDER gonderildi.")
                     if self.peerAddr in temporaryList.keys():
-                        print "C_NEGOTIATOR: HELLO'ya karsilik SALUT'den baska bir cevap yollayan peer, listeden silinir."
+                        logQueue.put("C_NEGOTIATOR: Peer listeden siliniyor.")
                         CONNECT_POINT_LIST.pop(self.peerAddr)
-                        print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
-                # Eger SALUT cevabi gelmisse, last seen'ini update ediyoruz.
                 else:
-                    print "C_NEGOTIATOR: HELLO'ya gelen cevap SALUT'dur."
                     value = temporaryList[self.peerAddr]
-                    # Statu'sunu S yapip, time'ini guncelliyoruz.
-                    CONNECT_POINT_LIST[self.peerAddr] = value[0] + "-S:" + time.time()
-                    print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+                    CONNECT_POINT_LIST[self.peerAddr] = "S:" + time.time()
                 s.close()
-                print "C_NEGOTIATOR: Peer baglantisini kapatti."
+                logQueue.put("C_NEGOTIATOR: Peer baglantisini kapatti.")
             except socket.timeout:
-                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
+                logQueue.put("C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor.")
                 temporaryList.pop(self.peerAddr)
-                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor."
                 s.close()
             
             s.send("CLOSE")
-            print "C_NEGOTIATOR: CLOSE gonderiliyor."
+            logQueue.put("C_NEGOTIATOR: CLOSE gonderiliyor.")
             try:
                 response2 = s.recv(buff)
-                print "C_NEGOTIATOR: Gonderilen CLOSE'a alinan cevap: " + str(response2)
-                # BUBYE'den baska bir cevap gelmisse eger
-                # CMDER yolluyoruz
+                logQueue.put("C_NEGOTIATOR: Gonderilen CLOSE'a alinan cevap: " + str(response2))
                 if response2[:5] != "BUBYE":
-                    print "C_NEGOTIATOR: CLOSE'a gelen cevap BUBYE'den farklidir."
                     s.send("CMDER")
-                    print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
+                    logQueue.put("C_NEGOTIATOR: Peer'a CMDER gonderildi.")
                     if self.peerAddr in temporaryList.keys():
-                        print "C_NEGOTIATOR: CLOSE'a karsilik BUBYE'dan baska bir cevap yollayan peer listeden silinir."
+                        logQueue.put("C_NEGOTIATOR: Peer listeden siliniyor.")
                         temporaryList.pop(self.peerAddr)
-                        print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
             except socket.timeout:
-                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
+                logQueue.put("C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor.")
                 temporaryList.pop(self.peerAddr)
-                print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
                 s.close()
             
         except :
-            print "C_NEGOTIATOR: Bir sorun olustu. Baglanti kapatiliyor. Peer listeden siliniyor."
+            logQueue.put("C_NEGOTIATOR: Bir sorun olustu. Baglanti kapatiliyor. Peer listeden siliniyor.")
             temporaryList.pop(self.peerAddr)
-            print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
             s.close()
         CONNECT_POINT_LIST = copy.deepcopy(temporaryList)
         
 
 ''' -----------------------------------NEGOTIATOR SERVER THREAD-------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-# Arabulucu - sunucu tarafi
+# Arabulucu - sunucu tarafi:
 class myNegotiatorServerThread (threading.Thread):
     def __init__(self, threadQueue):
         threading.Thread.__init__(self)
-        self.threadQueue = threadQueue
-        self.port = 1000                # dinleyecegi port numarasi
-        self.host = "127.0.0.1"         # sunucunun adresi
+        self.port = 10000               # dinleyecegi port numarasi
+        self.host = "127.0.0.5"         # sunucunun adresi
     def run(self):
-        print "S_NEGOTIATOR:  myNegotiatorServerThread Yaratildi."
+        logQueue.put("S_NEGOTIATOR:  myNegotiatorServerThread yaratildi.")
         s = socket.socket()             # socket yaratiyoruz
-        print "S_NEGOTIATOR: Soket yaratildi."
+        logQueue.put("S_NEGOTIATOR: Soket yaratildi.")
         s.bind((self.host, self.port))  # bind islemi gerceklestirilir
-        s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
+        s.listen(4)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
         while True:
             c,addr = s.accept()
-            print "S_NEGOTIATOR: " + str(addr)  + "'den/dan baglanti geldi."
-            print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-            negotiatorServerReceiveThread = myNegotiatorServerReceiveThread(c, addr, self.threadQueue)
+            logQueue.put("S_NEGOTIATOR: " + str(addr)  + "'den/dan baglanti geldi.")
+            logQueue.put("S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
+            negotiatorServerReceiveThread = myNegotiatorServerReceiveThread(c, addr)
             negotiatorServerReceiveThread.start()
         
 ''' -------------------------------------- NEGOTIATOR SERVER RECEIVE THREAD ------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-
-
-# HELLO => SALUT <type>
-# CLOSE => BUBYE
-# REGME <ip>:<port> => REGWA | REGOK <time> | REGER
-# GETNL <nlsize> => NLIST BEGIN
-#                   <ip>:<port>:<time>:<type>
-#                   <ip>:<port>:<time>:<type>
-#                   ...
-#                   NLIST END
-#Es-istemcilerinin arabulucu sunucudan beklentileri diger eslerin baglanti bilgileridir.
 
 class myNegotiatorServerReceiveThread(threading.Thread):
     def __init__(self, peerSocket, peerAddr, threadQueue):
         threading.Thread.__init__(self)
         self.peerSocket = peerSocket
         self.peerAddr = peerAddr
-        self.threadQueue = threadQueue
+        self.flagRegistration = False
 
     def run(self):
         global CONNECT_POINT_LIST
-        print "S_NEGOTIATOR: myNegotiatorServerReceiveThread Yaratildi."
-        print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+        logQueue.put("S_NEGOTIATOR: myNegotiatorServerReceiveThread Yaratildi.")
         while True:
             try:
                 receivedData = self.peerSocket.recv(buff)
-                if receivedData != "":
-                    print "S_NEGOTIATOR: Alinan veri: " + receivedData
+                if receivedData:
+                    logQueue.put("S_NEGOTIATOR: Alinan veri: " + receivedData)
                     self.parser(receivedData)
             except socket.timeout:
                 self.peerSocket.close()
                 break
+        logQueue.put("S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
 
     def parser(self, receivedData):
-        print "S_NEGOTIATOR: parser calisiyor. Alinan data: " + receivedData
+        logQueue.put("S_NEGOTIATOR: Parser calisiyor. Alinan data: " + receivedData)
         receivedData = receivedData.strip()
-        # herhangi bir uc'tan HELLO gelirse SALUT cevabini yolluyoruz.
+
         if (receivedData[:5] == "HELLO"):
-            print "S_NEGOTIATOR: Alinan veri HELLO -> SALUT cevabi gonderiliyor."
+            logQueue.put("S_NEGOTIATOR: SALUT gonderiliyor.")
             self.peerSocket.send("SALUT")
 
-        # herhangi bir birimden CLOSE gelirse, BUBYE deyip baglantimizi kapatiyoruz.
         elif (receivedData[:5] == "CLOSE"):
-            print "S_NEGOTIATOR: Alinan veri CLOSE -> BUBYE cevabi gonderiliyor."
+            logQueue.put("S_NEGOTIATOR: BUBYE gonderiliyor.")
             self.peerSocket.send("BUBYE")
-            print "S_NEGOTIATOR: Baglanti kapatiliyor."
-            self.peerSocket.close()
             if self.peerAddr in CONNECT_POINT_LIST.keys():
-                print "S_NEGOTIATOR: Peer listeden silinir."
-                del CONNECT_POINT_LIST[self.peerAddr]
-                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+                logQueue.put("S_NEGOTIATOR: Peer listeden silinir.")
+                CONNECT_POINT_LIST.pop(self.peerAddr)
+                logQueue.put("S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
 
-        # REGME komutu geldiyse
         elif (receivedData[:5] == "REGME"):
-            print "S_NEGOTIATOR: REGME istegi geldi."
             host, port = str.split(receivedData[6:], ':', 1)
             port = int(port)
-            # peer listede zaten varsa
-            if (host, port) in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
-                value = CONNECT_POINT_LIST[(host, port)]
-                print "S_PEER: " + host + str(port) + " listede zaten varsa status'u her durumda S yapilir."
-                value[2:] = "S:" + str(time.time())
+            if (host, port) in CONNECT_POINT_LIST.keys():
+                logQueue.put("S_PEER: Baglanti zaten listede kayitli. Status'u S yapiliyor. Time'i guncelleniyor.")
+                value = "S:" + str(time.time())
                 CONNECT_POINT_LIST[(host, port)] = value
-                print "S_PEER: " + "REGOK " + str(value[4:]) + " gonderilir."
-                self.peerSocket.send("REGOK " + str(value[4:]))
-                print "S_PEER: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-            # peer listede yoksa
+                print "S_PEER: " + "REGOK " + str(value[2:]) + " gonderilir."
+                self.peerSocket.send("REGOK " + str(value[2:]))
+                logQueue.put("S_PEER: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
             else:
-                print "S_NEGOTIATOR: " + host + ", " + str(port) + " listede yoksa, status'u W ile eklenir."
-                # kaydi beklemeye aliyoruz
-                print "S_NEGOTIATOR: REGWA gonderildi."
+                logQueue.put("S_NEGOTIATOR: REGWA gonderildi.")
                 self.peerSocket.send("REGWA")
-                CONNECT_POINT_LIST[(host, port)] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
-                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-                print "S_NEGOTIATOR: Baglanti kapatiliyor."
-                self.peerSocket.close()
+                logQueue.put("S_NEGOTIATOR: Baglanti listeye ekleniyor. Status'u W yapiliyor. Time'i guncelleniyor.")
+                CONNECT_POINT_LIST[(host, port)] = "W:" + str(time.time())
+                logQueue.put("S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
 
-        # GETNL : negotiator'in listesi istendiyse
         elif (receivedData[:5] == "GETNL"):
-            nlsize = int(receivedData[6:])
-            print "S_NEGOTIATOR: GETNL geldi. nlsize: " + str(nlsize)
-            self.peerSocket.send("NLIST BEGIN\n")
-            print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST BEGIN\n"
-            i = 0
-            for key, value in CONNECT_POINT_LIST.iterkeys():
-                if i <= nlsize:
-                    data = str(key[0]) + ":" + str(key[1]) + ":"\
-                            + str(value[0]) + ":" + str(value[4:]) + "\n"
-                    self.peerSocket.send(data)
-                    print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: " + data
-                    i += 1
-            self.peerSocket.send("NLIST END")
-            print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST END"
-            print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
-        #diger tum durumlarda   
+            if self.flagRegistration:
+                nlsize = int(receivedData[6:])
+                if nlsize == 0:
+                    nlsize = 50 #nlsize tanimlanmadigi yerde 50 kabul edilir.
+                self.peerSocket.send("NLIST BEGIN\n")
+                logQueue.put("S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST BEGIN\n")
+                i = 0
+                for key, value in CONNECT_POINT_LIST.iterkeys():
+                    if i <= nlsize:
+                        data = str(key[0]) + ":" + str(key[1]) + ":"\
+                                + str(value[0]) + ":" + str(value[2:]) + "\n"
+                        self.peerSocket.send(data)
+                        logQueue.put("S_NEGOTIATOR: Baglanti uzerinden gonderilen data: " + data)
+                        i += 1
+                self.peerSocket.send("NLIST END")
+                logQueue.put("S_NEGOTIATOR: Baglanti uzerinden gonderilen data : NLIST END")
+                logQueue.put("S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST))
+            else:
+                logQueue.put("REGER gonderiliyor.")
+                self.peerSocket.send("REGER")
         else:
-            print "S_NEGOTIATOR: CMDER gonderiliyor."
+            logQueue.put("S_NEGOTIATOR: CMDER gonderiliyor.")
             self.peerSocket.send("CMDER")
-            print "S_NEGOTIATOR: Baglanti kapatiliyor."
-            self.peerSocket.close()
+        logQueue.put("S_NEGOTIATOR: Baglanti kapatiliyor.")
+        self.peerSocket.close()
 
     
+'''--------------------------------------------- LOG THREAD -----------------------------------------------------'''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# (print'le konsola bastiklarimi bir log dosyasinda tutmayi tercih ettim.)
+class myLogThread (threading.Thread):
+    def __init__(self, logFileName):
+        threading.Thread.__init__(self)
+        self.fid = open(logFileName, "a")
+    def log(self, message):
+        self.fid.write(str(time.ctime()) + " - " + message)
+        self.fid.flush()
+    def run(self):
+        while True:
+            if not logQueue.empty():
+                self.log(str(logQueue.get()) + "\n")
+        self.fid.close()
+
+
 #buffer buyuklugu
 buff = 2048
 # Baglanti listesi
@@ -242,17 +220,20 @@ CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...} yani 
 UPDATE_INTERVAL = 20
 # kilit mekanizmasi
 pLock = threading.Lock()
+# log dosyasi icin olusturulan kuyruk
+logQueue = Queue.Queue()
 
 ''' --------------------------------------------------- MAIN ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 def main():
 
-    threadQueue = Queue.Queue()
+    logThread = myLogThread("log.txt")
+    logThread.start()
 
-    negotiatorClientThread = myNegotiatorClientThread(threadQueue)
+    negotiatorClientThread = myNegotiatorClientThread()
     negotiatorClientThread.start()
 
-    negotiatorServerThread = myNegotiatorServerThread(threadQueue)
+    negotiatorServerThread = myNegotiatorServerThread()
     negotiatorServerThread.start()
 
     negotiatorClientThread.join()
