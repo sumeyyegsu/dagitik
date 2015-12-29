@@ -1,291 +1,271 @@
 __author__ = 'sumeyye'
 
-from pyGraphics_ui import Ui_ImageProcessor
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-import sys
 import threading
+import socket
 import Queue
-import numpy as np
 import time
-import math
+import copy
+from time import strftime
 
-def rgb2gray(rgbint):
-    # convert the 32 bit color into 8-bit grayscale
-    b = rgbint & 255
-    g = (rgbint >> 8) & 255
-    r = (rgbint >> 16) & 255
-    return (r + g + b) // 3
+# TODO: timeout ile ilgilenme.
+# TODO: <type> hakkinda tekrar dusunme. Gereksiz olabilir, gereksizse sistemden type bilgisini cikarma.
 
-def gray2rgb(gray):
-    # convert the 8bit ro 32bit (of course the color info is lost)
-    return gray * 65536 + gray * 256 + gray
+''' --------------------------------------- PEER CLIENT THREAD -------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Bu threadin bir gorevi: Peer-Client calistigi sure boyunca, UPDATE_INTERVAL araliginda, tum baglantilari kontrol
+# edip CONNECTION_POINT_LIST'i guncellenmeye calisilirken, her baglantiyi tek tek kontrol etmektir.
+# HELLO - SALUT ve CLOSE - BUBYE
+# es - istemci tarafi
+# TODO: REGME gonderme, REGWA REGOK bekleme
+# TODO: FUNLS gonderip, FUNLI BEGIN... bekleme
+# TODO: FUNRQ gonderip, FUNYS FUNNO bekleme
+# TODO: EXERQ gonderip, EXEOK EXEDS bekleme
+# TODO: PATCH gonderip, PATYS PATNO bekleme
 
-
-class WorkerThread (threading.Thread):
-    def __init__(self, name, inQueue, outQueue, pLock):
+class myNegotiatorClientThread (threading.Thread):
+    def __init__(self, threadQueue):
         threading.Thread.__init__(self)
-        self.name = name
-        self.inQueue = inQueue # the queue to read unprocessed data
-        self.outQueue = outQueue # the queue to put processed data
-        self.pLock = pLock
-        self.patchsize = 128
+        self.threadQueue = threadQueue
+    def run(self):
+        print "C_NEGOTIATOR:  myNegotiatorClientThread yaratildi."
+        while True:
+            time.sleep(UPDATE_INTERVAL)
+            for peerAddr in CONNECT_POINT_LIST.keys():
+                testPeerConnectionThread = myTestPeerConnectionThread(peerAddr)
+                testPeerConnectionThread.start()
+            print "C_NEGOTIATOR: " + strftime("%m/%d/%Y %H:%M:%S") + " | CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
-    def convertGray(self, header, patch):
-        # convert the patch to gray (actually does nothing as the incoming
-        # data is already 8bit grayscale data)
-        newMessage = [0] * self.patchsize * self.patchsize
-        for i in range(0,self.patchsize * self.patchsize):
-            newMessage[i] = patch[i]
-        return (header, newMessage)
-
-    def filterSobel(self, header, patch, threshold):
-        # convolve the patch with the matrix [[1,0,-1],[2,0,-2][1,0,-1]]
-        # read how the convolution is applied in discrete domain
-        newMessage = [0] * self.patchsize * self.patchsize
-        for i in range(1, self.patchsize-1):
-            for j in range(1, self.patchsize-1):
-                index0 = j * self.patchsize + i # top line index
-                index1 = (j+1) * self.patchsize + i # same line index
-                index1r = (j-1) * self.patchsize + i # bottom line index
-                temp0 = \
-                    + 1* patch[index1r - 1] \
-                    - 1* patch[index1r + 1] \
-                    + 2* patch[index0 - 1] \
-                    - 2* patch[index0 + 1] \
-                    + 1* patch[index1 - 1] \
-                    - 1* patch[index1 + 1]
-
-                temp1 = \
-                    - 1* patch[index1r - 1] \
-                    - 2* patch[index1r]\
-                    - 1* patch[index1r + 1] \
-                    + 1* patch[index1 - 1] \
-                    + 2* patch[index1]\
-                    + 1* patch[index1 + 1]
-
-                newMessage[index0] = int(math.sqrt(temp0**2 + temp1**2))
-                # apply the threshold parameter
-                # if newMessage[index0] > threshold:
-                #     newMessage[index0] = 255
-                # else:
-                #     newMessage[index0] = 0
-        return (header, newMessage)
-
+''' ---------------------------------------- TEST PEER CONNECTION THREAD ---------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Ip/Port ikilisine gore, test edilecek birim icin yaratilan thread.
+# Baglantiyi test edip ona gore, CONNECT_POIN_LIST'i guncelliyor.
+class myTestPeerConnectionThread(threading.Thread):
+    def __init__(self, peerAddr):
+        threading.Thread.__init__(self)
+        self.peerAddr = peerAddr
+        self.peerHost = str(self.peerAddr[0])
+        self.peerPort = int(self.peerAddr[1])
 
     def run(self):
-        print self.name + ": Starting."
-        while(True):
-            if self.inQueue.qsize() > 0:
-                message = self.inQueue.get()
-                if message == "END":
-                    print self.name + ": Ending."
-                    break
-                print self.name + ": " + str(message[0][0]) + \
-                    " " + str(message[0][1]) + " Queue size: " \
-                      + str(self.inQueue.qsize())
-                if str(message[0][0]) == "SobelFilter":
-                    outMessage = self.filterSobel(message[0][1], message[1],
-                                                  128)
-                if str(message[0][0]) == "GrayScale":
-                    outMessage = self.convertGray(message[0][1], message[1])
-                # self.pLock.acquire()
-                self.outQueue.put(outMessage)
-                # self.pLock.release()
-            time.sleep(.01)
-
-class imGui(QMainWindow):
-    def __init__(self, workQueue, processedQueue, pLock):
-        self.qt_app = QApplication(sys.argv)
-        QWidget.__init__(self, None)
-
-        # create the main ui
-        self.pQueue = processedQueue
-        self.wQueue = workQueue
-        self.ui = Ui_ImageProcessor()
-        self.ui.setupUi(self)
-        self.imageScene = QGraphicsScene()
-        self.original = None
-        self.processed = None
-        self.frameScaled = None
-        self.imageFile = None
-        self.pLock = pLock
-        self.patchsize = 128
-
-        # fill combobox
-        self.ui.boxFunction.addItem("GrayScale")
-        self.ui.boxFunction.addItem("SobelFilter")
-
-        # connect buttons
-        self.ui.buttonLoadImage.clicked.connect(self.loadImagePressed)
-        self.ui.buttonResetImage.clicked.connect(self.resetImagePressed)
-        self.ui.buttonStartProcess.clicked.connect(self.startProcess)
-        self.ui.buttonStopProcess.clicked.connect(self.stopProcess)
-
-        # start timer
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.collectPatch)
-        self.timer.start(10)
-
-        self.sTimer = QTimer()
-        self.sTimer.timeout.connect(self.scheduler)
-
-        self.perms = None
-
-        self.sceneObject = None
-
-    def loadImagePressed(self):
-        # load the image from a file into a QImage object
-        imageFile = QFileDialog.getOpenFileName(self,
-                                              'Open file',
-                                              '.',
-                                              'Images (*.png *.xpm '
-                                              '*.jpg)' )
-        if not imageFile:
-            return
-        with open(imageFile, 'r') as f:
+        global CONNECT_POINT_LIST
+        print "C_NEGOTIATOR: myTestPeerConnectionThread Yaratildi."
+        s = socket.socket() #baglanti testi icin soket aciyoruz
+        temporaryList = CONNECT_POINT_LIST.copy() #listenin bir kopyasini temporaryList'e atiyoruz.
+        try:
+            print "C_NEGOTIATOR: ip: " + self.peerHost + ", port: " + str(self.peerPort) + "."
+            s.connect((self.peerHost, self.peerPort)) #ip,port a baglaniyoruz.
+            print "C_NEGOTIATOR: " + self.peerHost + ", " + str(self.peerPort) + "  -> ile baglanti kuruldu."
+            s.send("HELLO")
+            print "C_NEGOTIATOR: HELLO gonderildi."
             try:
-                self.imageFile = imageFile
-                self.original = QImage(imageFile)
-                # say that an image is loaded
-                print "Image loaded: " + imageFile
-            except:
-                print "Problem with image file: " + self.imageFile
-                self.imageFile = None
-            finally:
-                self.processed = self.original.convertToFormat(
-                    QImage.Format_RGB16)
-                if self.imageFile:
-                    # find the horizontal and vertical patch numgers
-                    self.tmpPatchNum = (
-                        self.processed.size().width() / self.patchsize,
-                        self.processed.size().height() / self.patchsize )
-                    self.numPatches = self.tmpPatchNum[0] * \
-                                      self.tmpPatchNum[1]
+                response1 = s.recv(buff)
+                print "C_NEGOTIATOR: Gonderilen HELLO'ya alinan cevap: " + str(response1)
+                # SALUT'den baska bir cevap gelmisse eger
+                # CMDER yolluyoruz, connection'i kapatip listeden dusuruyoruz.
+                if response1[:5] != "SALUT":
+                    print "C_NEGOTIATOR: HELLO'ya gelen cevap SALUT'den farklidir."
+                    s.send("CMDER")
+                    print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
+                    # Listede hala var gorunuyorsa, listeden dusuruyoruz.
+                    if self.peerAddr in temporaryList.keys():
+                        print "C_NEGOTIATOR: HELLO'ya karsilik SALUT'den baska bir cevap yollayan peer, listeden silinir."
+                        CONNECT_POINT_LIST.pop(self.peerAddr)
+                        print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+                # Eger SALUT cevabi gelmisse, last seen'ini update ediyoruz.
+                else:
+                    print "C_NEGOTIATOR: HELLO'ya gelen cevap SALUT'dur."
+                    value = temporaryList[self.peerAddr]
+                    # Statu'sunu S yapip, time'ini guncelliyoruz.
+                    CONNECT_POINT_LIST[self.peerAddr] = value[0] + "-S:" + time.time()
+                    print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+                s.close()
+                print "C_NEGOTIATOR: Peer baglantisini kapatti."
+            except socket.timeout:
+                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
+                temporaryList.pop(self.peerAddr)
+                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor."
+                s.close()
 
-                self.updateImage()
+            s.send("CLOSE")
+            print "C_NEGOTIATOR: CLOSE gonderiliyor."
+            try:
+                response2 = s.recv(buff)
+                print "C_NEGOTIATOR: Gonderilen CLOSE'a alinan cevap: " + str(response2)
+                # BUBYE'den baska bir cevap gelmisse eger
+                # CMDER yolluyoruz
+                if response2[:5] != "BUBYE":
+                    print "C_NEGOTIATOR: CLOSE'a gelen cevap BUBYE'den farklidir."
+                    s.send("CMDER")
+                    print "C_NEGOTIATOR: Peer'a CMDER gonderildi."
+                    if self.peerAddr in temporaryList.keys():
+                        print "C_NEGOTIATOR: CLOSE'a karsilik BUBYE'dan baska bir cevap yollayan peer listeden silinir."
+                        temporaryList.pop(self.peerAddr)
+                        print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+            except socket.timeout:
+                print "C_NEGOTIATOR: Zaman asimi. Baglanti kapatiliyor. Peer listeden siliniyor."
+                temporaryList.pop(self.peerAddr)
+                print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+                s.close()
 
-    def resetImagePressed(self):
-        # return to the original image
-        if not self.imageFile:
-            return
-        self.processed = self.original
-        self.updateImage()
-
-    def updateImage(self):
-        # update the visual of the image with the new processed image
-        if self.processed:
-            multiplierh = float(self.processed.size().height())/float(self.ui.imageView.size().height())
-            multiplierw = float(self.processed.size().width())/float(self.ui.imageView.size().width())
-            if multiplierh > multiplierw:
-                self.frameScaled = self.processed.scaledToHeight(self.ui.imageView.size().height() - 5 )
-            else:
-                self.frameScaled = self.processed.scaledToWidth(self.ui.imageView.size().width() - 5 )
-
-            if self.sceneObject:
-                self.imageScene.removeItem(self.sceneObject)
-            self.sceneObject = self.imageScene.addPixmap(QPixmap.fromImage(self.frameScaled))
-            self.imageScene.update()
-            self.ui.imageView.setScene(self.imageScene)
-
-    def serializePatch(self, x, y, offset = 0):
-        # serializes the patch and prepares the message data
-        tempVector = [0] * (self.patchsize**2)
-        rect = (x*self.patchsize, y*self.patchsize)
-        rng = range(0,self.patchsize)
-
-        for j in rng:
-            Y = j + rect[1]
-            for i in rng:
-                X = i + rect[0]
-                # the message contains 8-bit grayscale (0-255) data
-                tempVector[j*self.patchsize + i] = \
-                    rgb2gray(self.processed.pixel(X,Y))
-                # we should also send the reference rectangle information
-                # where to put the patch when we receive the processed
-        return rect, tempVector
-
-    def deserializePatch(self, refPix, data):
-        # convert the message data into the matrix and put directy on the
-        # image using the reference pixels (refPix)
-        counter = 0
-        for color in data:
-            x = counter % self.patchsize
-            y = counter // self.patchsize
-            self.processed.setPixel(refPix[0] + x,
-                                    refPix[1] + y,
-                                    gray2rgb(color))
-            counter += 1
+        except :
+            print "C_NEGOTIATOR: Bir sorun olustu. Baglanti kapatiliyor. Peer listeden siliniyor."
+            temporaryList.pop(self.peerAddr)
+            print "C_NEGOTIATOR: Yeni temporaryList: " + str(temporaryList)
+            s.close()
+        CONNECT_POINT_LIST = copy.deepcopy(temporaryList)
 
 
-    def scheduler(self):
-        # puts the serialized patches into the work queue
-        if self.processed:
-            function = self.ui.boxFunction.currentText()
-            if len(self.perms) > 0:
-                p = self.perms.pop()
-                x = p % self.tmpPatchNum[0]
-                y = p // self.tmpPatchNum[0]
-                rect, tempVector = self.serializePatch(x,y)
-                self.wQueue.put(((function, rect), tempVector))
-            else:
-                self.sTimer.stop()
+''' ----------------------------------------PEER SERVER THREAD-------------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Arabulucu - sunucu tarafi
+class myNegotiatorServerThread (threading.Thread):
+    def __init__(self, threadQueue):
+        threading.Thread.__init__(self)
+        self.threadQueue = threadQueue
+        self.port = 10000               # dinleyecegi port numarasi
+        self.host = "127.0.0.5"         # sunucunun adresi
+    def run(self):
+        print "S_NEGOTIATOR:  myNegotiatorServerThread Yaratildi."
+        s = socket.socket()             # socket yaratiyoruz
+        print "S_NEGOTIATOR: Soket yaratildi."
+        s.bind((self.host, self.port))  # bind islemi gerceklestirilir
+        s.listen(5)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
+        while True:
+            c,addr = s.accept()
+            print "S_NEGOTIATOR: " + str(addr)  + "'den/dan baglanti geldi."
+            print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+            negotiatorServerReceiveThread = myNegotiatorServerReceiveThread(c, addr, self.threadQueue)
+            negotiatorServerReceiveThread.start()
+
+''' -------------------------------------- NEGOTIATOR SERVER RECEIVE THREAD ------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
 
 
-    def collectPatch(self):
-        # collects the processed patches from the process queue
-        if self.pQueue.qsize() > 0:
-            for i in range(0, self.pQueue.qsize()):
-                # self.pLock.acquire()
-                message = self.pQueue.get()
-                # self.pLock.release()
-                self.deserializePatch(message[0], message[1])
-            self.updateImage()
+# HELLO => SALUT <type>
+# CLOSE => BUBYE
+# REGME <ip>:<port> => REGWA | REGOK <time> | REGER
+# GETNL <nlsize> => NLIST BEGIN
+#                   <ip>:<port>:<time>:<type>
+#                   <ip>:<port>:<time>:<type>
+#                   ...
+#                   NLIST END
+#Es-istemcilerinin arabulucu sunucudan beklentileri diger eslerin baglanti bilgileridir.
 
-    def startProcess(self):
-        # randomly organizes the patches
-        self.perms = list(np.random.permutation(self.numPatches))
-
-        # or simply orders the patches
-        # self.perms = range(0,self.numPatches)
-        # self.perms.reverse()
-
-        # start scheduler's timer
-        self.sTimer.start()
-
-    def stopProcess(self):
-        # stops the timer and thus the processing
-        self.sTimer.stop()
+class myNegotiatorServerReceiveThread(threading.Thread):
+    def __init__(self, peerSocket, peerAddr, threadQueue):
+        threading.Thread.__init__(self)
+        self.peerSocket = peerSocket
+        self.peerAddr = peerAddr
+        self.threadQueue = threadQueue
 
     def run(self):
-        self.show()
-        self.qt_app.exec_()
+        global CONNECT_POINT_LIST
+        print "S_NEGOTIATOR: myNegotiatorServerReceiveThread Yaratildi."
+        print "S_NEGOTIATOR: CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+        while True:
+            try:
+                receivedData = str(self.peerSocket.recv(buff))
+                if receivedData != "":
+                    print "S_NEGOTIATOR: Alinan veri: " + receivedData
+                    self.parser(receivedData)
+            except socket.timeout:
+                self.peerSocket.close()
+                break
+
+    def parser(self, receivedData):
+        print "S_NEGOTIATOR: parser calisiyor. Alinan data: " + receivedData
+        receivedData = receivedData.strip()
+        # herhangi bir uc'tan HELLO gelirse SALUT cevabini yolluyoruz.
+        if (receivedData[:5] == "HELLO"):
+            print "S_NEGOTIATOR: Alinan veri HELLO -> SALUT cevabi gonderiliyor."
+            self.peerSocket.send("SALUT")
+
+        # herhangi bir birimden CLOSE gelirse, BUBYE deyip baglantimizi kapatiyoruz.
+        elif (receivedData[:5] == "CLOSE"):
+            print "S_NEGOTIATOR: Alinan veri CLOSE -> BUBYE cevabi gonderiliyor."
+            self.peerSocket.send("BUBYE")
+            print "S_NEGOTIATOR: Baglanti kapatiliyor."
+            self.peerSocket.close()
+            if self.peerAddr in CONNECT_POINT_LIST.keys():
+                print "S_NEGOTIATOR: Peer listeden silinir."
+                CONNECT_POINT_LIST.pop(self.peerAddr)
+                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+
+        # REGME komutu geldiyse
+        elif (receivedData[:5] == "REGME"):
+            print "S_NEGOTIATOR: REGME istegi geldi."
+            host, port = str.split(receivedData[6:], ':', 1)
+            port = int(port)
+            # peer listede zaten varsa
+            if (host, port) in CONNECT_POINT_LIST.keys():  # ex: N-S:123213546
+                value = CONNECT_POINT_LIST[(host, port)]
+                print "S_NEGOTIATOR: " + host + str(port) + " listede zaten varsa status'u S yapilir."
+                if value[2] == "S":
+                    value[3:] = ":" + str(time.time())
+                    print "S_NEGOTIATOR: " + "REGOK " + str(value[4:]) + " gonderilir."
+                    self.peerSocket.send("REGOK " + str(value[4:]))
+                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+            # peer listede yoksa
+            else:
+                print "S_NEGOTIATOR: " + host + ", " + str(port) + " listede yoksa, status'u W ile eklenir."
+                # kaydi beklemeye aliyoruz
+                print "S_NEGOTIATOR: REGWA gonderildi."
+                self.peerSocket.send("REGWA")
+                CONNECT_POINT_LIST[(host, port)] = "?-W:" + str(time.time())  ##P mi N mi neye gore ekleyecegiz???
+                print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+                print "S_NEGOTIATOR: Baglanti kapatiliyor."
+                self.peerSocket.close()
+
+        # GETNL : negotiator'in listesi istendiyse
+        elif (receivedData[:5] == "GETNL"):
+            nlsize = int(receivedData[6:])
+            if nlsize == 0:
+                nlsize = 50 #nlsize tanimlanmadigi yerde 50 kabul edilir.
+            print "S_NEGOTIATOR: GETNL geldi. nlsize: " + str(nlsize)
+            self.peerSocket.send("NLIST BEGIN\n")
+            print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST BEGIN\n"
+            i = 0
+            for key, value in CONNECT_POINT_LIST.iterkeys():
+                if i <= nlsize:
+                    data = str(key[0]) + ":" + str(key[1]) + ":"\
+                            + str(value[0]) + ":" + str(value[4:]) + "\n"
+                    self.peerSocket.send(data)
+                    print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: " + data
+                    i += 1
+            self.peerSocket.send("NLIST END")
+            print "S_NEGOTIATOR: Baglanti uzerinden gonderilen: NLIST END"
+            print "S_NEGOTIATOR: Yeni CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
+        #diger tum durumlarda
+        else:
+            print "S_NEGOTIATOR: CMDER gonderiliyor."
+            self.peerSocket.send("CMDER")
+            print "S_NEGOTIATOR: Baglanti kapatiliyor."
+            self.peerSocket.close()
 
 
+#buffer buyuklugu
+buff = 2048
+# Baglanti listesi
+CONNECT_POINT_LIST = {} #{[addr1,type1-S:time1],[addr2,type2-W:time2],...} yani KEY = (host,port) ve VALUE = type-status:time
+# CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
+UPDATE_INTERVAL = 20
+# kilit mekanizmasi
+pLock = threading.Lock()
+
+''' --------------------------------------------------- MAIN ---------------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
 def main():
-    # the queue should contain no more than maxSize elements
-    numThreads = 4
-    maxSize = numThreads * 25
-    workThreads = []
-    workQueue = Queue.Queue()
-    processedQueue = Queue.Queue(maxSize)
-    pLock = threading.Lock()
 
-    for i in range(0,numThreads):
-        workThreads.append(WorkerThread("WorkerThread" + str(i),
-                                        workQueue,
-                                        processedQueue,
-                                        pLock))
-        workThreads[i].start()
+    threadQueue = Queue.Queue()
 
-    app = imGui(workQueue,processedQueue, pLock)
-    app.run()
+    negotiatorClientThread = myNegotiatorClientThread(threadQueue)
+    negotiatorClientThread.start()
 
-    for a in range(0,numThreads):
-        workQueue.put("END")
+    negotiatorServerThread = myNegotiatorServerThread(threadQueue)
+    negotiatorServerThread.start()
 
-    for thread in workThreads:
-        thread.join()
+    negotiatorClientThread.join()
+    negotiatorServerThread.join()
 
 if __name__ == '__main__':
     main()
