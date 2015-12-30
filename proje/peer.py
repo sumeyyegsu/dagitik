@@ -6,7 +6,7 @@ import time
 import copy
 from time import strftime
 
-''' --------------------------------------- PEER CLIENT THREAD -------------------------------------------- '''
+''' --------------------------------------- PEER CLIENT THREAD ------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 # Es istemci tarafi
 class myPeerClientThread (threading.Thread):
@@ -266,7 +266,7 @@ buff = 2048
 # Baglanti listesi
 CONNECT_POINT_LIST = {} #{[addr1,S:time1],[addr2,W:time2],...} yani KEY = (host,port) ve VALUE = status:time
 # CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
-UPDATE_INTERVAL = 20
+UPDATE_INTERVAL = 600
 # kilit mekanizmasi
 pLock = threading.Lock()
 # peer'in sahip oldugu fonksiyonlarin listesi
