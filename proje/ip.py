@@ -109,8 +109,27 @@ class WorkerThread (threading.Thread):
 
                 newMessage[index0] = int(math.sqrt(temp0**2 + temp1**2))
         return (header, newMessage)
-        def gaussianFilter(self, header, patch):
-            print "gaussianFilter"
+        
+    def gaussianFilter(self, header, patch):
+        # convolve the patch with the matrix = [[1/16f, 1/8f, 1/16f], [1/8f, 1/4f, 1/8f], [1/16f, 1/8f, 1/16f]]
+        newMessage = [0] * self.patchsize * self.patchsize
+        for i in range(1, self.patchsize-1):
+            for j in range(1, self.patchsize-1):
+                index0 = j * self.patchsize + i # top line index
+                index1 = (j+1) * self.patchsize + i # same line index
+                index1r = (j-1) * self.patchsize + i # bottom line index
+                temp0 = \
+                    + (1/16)* patch[index1r - 1] \
+                    + (1/8)* patch[index1r ] \
+                    + (1/16)* patch[index1r + 1] \
+                    + (1/8)* patch[index0 - 1] \
+                    + (1/4)* patch[index0 ] \
+                    + (1/8)* patch[index0 + 1] \
+                    + (1/16)* patch[index1 - 1] \
+                    + (1/8)* patch[index1 ] \
+                    + (1/16)* patch[index1 + 1]
+                newMessage[index0] = int(temp0/16)
+        return (header, newMessage)
 
     def run(self):
         print self.name + ": Starting."
