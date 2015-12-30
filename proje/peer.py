@@ -6,8 +6,8 @@ import time
 import copy
 from time import strftime
 
-''' --------------------------------------- PEER CLIENT THREAD ------------------------------------------------- '''
-''' ------------------------------------------------------------------------------------------------------------- '''
+''' --------------------------------------- PEER CLIENT THREAD ----------------------------------------------------- '''
+''' ---------------------------------------------------------------------------------------------------------------- '''
 # Es istemci tarafi
 class myPeerClientThread (threading.Thread):
     def __init__(self):
@@ -16,7 +16,7 @@ class myPeerClientThread (threading.Thread):
     def run(self):
         try:
             self.negotiatorSocket.connect((negotiatorHost, negotiatorPort))
-            self.negotiatorSocket.send("REGME " + myHost + ":" + str(myPort))
+            self.negotiatorSocket.sendall("REGME " + myHost + ":" + str(myPort))
             testConnectionList = myTestConnectionListThread()
             testConnectionList.start()
             testConnectionList.join()
