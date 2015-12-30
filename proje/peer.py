@@ -7,15 +7,56 @@ import time
 import copy
 from time import strftime
 
-''' --------------------------------------- PEER CLIENT THREAD -------------------------------------------- '''
-''' ------------------------------------------------------------------------------------------------------------- '''
+''' --------------------------------------- TEST CONNECTION LIST THREAD -------------------------------------------- '''
+''' ---------------------------------------------------------------------------------------------------------------- '''
+# Hem kendi listesindeki tum baglantilari testConnectionThread ile test ediyor
+# Hem de tum test ettigi baglantilarin baglanti listelerinden kendi listesini guncelliyor.
+class myTestConnectionListThread (threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+    def run(self):
+        print "C_PEER:  myTestConnectionListThread yaratildi."
+        while True:
+            time.sleep(UPDATE_INTERVAL)
+            for peerAddr in CONNECT_POINT_LIST.keys():
+                testConnectionThread = myTestConnectionThread(peerAddr)
+                testConnectionThread.start()
+                getListFromConnection = myGetListFromConnectionThread(peerAddr)
+                getListFromConnection.start()
+            print "C_PEER: " + strftime("%m/%d/%Y %H:%M:%S") + " | CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
-
-''' ---------------------------------------- TEST PEER CONNECTION THREAD ---------------------------------------- '''
+''' ------------------------------------ GET LIST FROM CONNECTION THREAD ---------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
-# Ip/Port ikilisine gore, test edilecek peer/negotiator icin yaratilan threaddir.
-# Baglantiyi test edip ona gore, CONNECT_POIN_LIST'i guncelliyor.
-# Baglantiyi test eden thread:
+#Baglanti listesindeki tum baglantilarin baglanti listelerini alip, kendi baglanti listesini guncelliyor.
+class myGetListFromConnectionThread (threading.Thread):
+    def __init__(self, peerAddr):
+        threading.Thread.__init__(self)
+        self.peerAddr = peerAddr
+        self.host = peerAddr[0]
+        self.port = peerAddr[1]
+        self.peerSocket = socket.socket()
+    def run(self):
+        print "C_PEER: myGetListFromConnectionThread yaratildi."
+        self.peerSocket.connect((self.host, int(self.port)))
+        self.peerSocket.send("REGME " + self.host + ":" + self.port)
+        response = self.peerSocket.recv(buff)
+        if response[:5] == "REGOK":
+            self.peerSocket.send("GETNL")
+            receivedData = self.peerSocket.recv(buff)
+            if receivedData == "NLIST BEGIN":
+                receivedData = self.peerSocket.recv(buff)
+                while receivedData != "NLIST END":
+                    ligne = str.split(receivedData, '\n')
+                    ligneHost, lignePort, ligneType, ligneTime= str.split(ligne, ":", 3)
+                    lignePort = int(lignePort)
+                    if (ligneHost, lignePort) not in CONNECT_POINT_LIST:
+                        CONNECT_POINT_LIST[(ligneHost, lignePort)]= "S:" + ligneTime
+            # listede sonuna ulasilmadan baska bir yapi gonderilirse istemci baglantiyi kapatir.
+            self.peerSocket.close()
+
+''' ---------------------------------------- TEST CONNECTION THREAD ---------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Kendi baglanti listesindeki baglantilari test ediyor.
 class myTestPeerConnectionThread(threading.Thread):
     def __init__(self, peerAddr):
         threading.Thread.__init__(self)
