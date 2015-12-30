@@ -284,14 +284,14 @@ negotiatorPort = 10001
 ''' ------------------------------------------------------------------------------------------------------------- '''
 def main():
     
-    peerClientThread = myPeerServerThread()
+    peerClientThread = myPeerClientThread()
     peerClientThread.start()
 
     peerServerThread = myPeerServerThread()
     peerServerThread.start()
 
     peerClientThread.join()
-    peerClientThread.join()
+    peerServerThread.join()
 
 if __name__ == '__main__':
     main()
