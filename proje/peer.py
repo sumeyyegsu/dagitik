@@ -16,7 +16,7 @@ class myPeerClientThread (threading.Thread):
     def run(self):
         try:
             self.negotiatorSocket.connect((negotiatorHost, negotiatorPort))
-            self.negotiatorSocket.send("REGME " + myHost + ":" + myPort)
+            self.negotiatorSocket.send("REGME " + myHost + ":" + str(myPort))
             testConnectionList = myTestConnectionListThread()
             testConnectionList.start()
             testConnectionList.join()
