@@ -2,10 +2,27 @@ __author__ = 'sumeyye'
 
 import threading
 import socket
-import Queue
 import time
 import copy
 from time import strftime
+
+''' --------------------------------------- PEER CLIENT THREAD -------------------------------------------- '''
+''' ------------------------------------------------------------------------------------------------------------- '''
+# Es istemci tarafi
+class myPeerClientThread (threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.negotiatorSocket = socket.socket()
+    def run(self):
+        try:
+            self.negotiatorSocket.connect((negotiatorHost, negotiatorPort))
+            self.negotiatorSocket.send("REGME " + myHost + ":" + myPort)
+            testConnectionList = myTestConnectionListThread()
+            testConnectionList.start()
+            testConnectionList.join()
+        except:
+            self.negotiatorSocket.close()
+
 
 ''' --------------------------------------- TEST CONNECTION LIST THREAD -------------------------------------------- '''
 ''' ---------------------------------------------------------------------------------------------------------------- '''
@@ -23,6 +40,8 @@ class myTestConnectionListThread (threading.Thread):
                 testConnectionThread.start()
                 getListFromConnection = myGetListFromConnectionThread(peerAddr)
                 getListFromConnection.start()
+                testConnectionThread.join()
+                getListFromConnection.join()
             print "C_PEER: " + strftime("%m/%d/%Y %H:%M:%S") + " | CONNECT_POINT_LIST: " + str(CONNECT_POINT_LIST)
 
 ''' ------------------------------------ GET LIST FROM CONNECTION THREAD ---------------------------------------- '''
@@ -61,8 +80,8 @@ class myTestPeerConnectionThread(threading.Thread):
     def __init__(self, peerAddr):
         threading.Thread.__init__(self)
         self.peerAddr = peerAddr
-        self.peerHost = str(self.peerAddr[0])
-        self.peerPort = int(self.peerAddr[1])
+        self.peerHost = self.peerAddr[0]
+        self.peerPort = self.peerAddr[1]
 
     def run(self):
         global CONNECT_POINT_LIST
@@ -124,18 +143,17 @@ class myTestPeerConnectionThread(threading.Thread):
 class myPeerServerThread (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.port = 10000               # dinleyecegi port numarasi
-        self.host = "127.0.0.5"         # sunucunun adresi
+        self.myPeerSocket = socket.socket()
     def run(self):
-        s = socket.socket()             # socket yaratiyoruz
-        s.bind((self.host, self.port))  # bind islemi gerceklestirilir
-        s.listen(4)                     # sunucu portu dinlemeye baslar(baglanti kuyrugunda tutulacak baglanti sayisi : 5)
+        self.myPeerSocket.bind((myHost, myPort))
+        self.myPeerSocket.listen(4)               
         while True:
-            c,addr = s.accept()
-            negotiatorServerReceiveThread = myPeerServerReceiveThread(c, addr)
-            negotiatorServerReceiveThread.start()
+            c, ddr = self.myPeerSocket.accept()
+            peerServerReceiveThread = myPeerServerReceiveThread(c, addr)
+            peerServerReceiveThread.start()
+            peerServerReceiveThread.join()
 
-''' -------------------------------------- NEGOTIATOR SERVER RECEIVE THREAD ------------------------------------- '''
+''' -------------------------------------- PEER SERVER RECEIVE THREAD ------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 
 class myNegotiatorServerReceiveThread(threading.Thread):
@@ -253,18 +271,27 @@ UPDATE_INTERVAL = 20
 pLock = threading.Lock()
 # peer'in sahip oldugu fonksiyonlarin listesi
 functionList = ['Gray Scale Filter', 'Sobel Filter', 'Binarize Filter', 'Prewitt Filter', 'Gaussian Filter']
-
+#Peer'in host'u
+myHost = "127.0.0.5"
+#Peer'in port'u
+myPort = 10000
+#Negotiator'in host'u
+negotiatorHost = "127.0.0.6"
+#Negotiator'in port'u
+negotiatorPort = 10001
 
 ''' --------------------------------------------------- MAIN ---------------------------------------------------- '''
 ''' ------------------------------------------------------------------------------------------------------------- '''
 def main():
-
-    threadQueue = Queue.Queue()
     
-    negotiatorServerThread = myPeerServerThread()
-    negotiatorServerThread.start()
+    peerClientThread = myPeerServerThread()
+    peerClientThread.start()
 
-    negotiatorServerThread.join()
+    peerServerThread = myPeerServerThread()
+    peerServerThread.start()
+
+    peerClientThread.join()
+    peerClientThread.join()
 
 if __name__ == '__main__':
     main()
