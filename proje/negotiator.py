@@ -217,7 +217,7 @@ buff = 2048
 # Baglanti listesi
 CONNECT_POINT_LIST = {} #{[addr1,S:time1],[addr2,W:time2],...} yani KEY = (host,port) ve VALUE = status:time
 # CONNECT_POINT_LIST'in bir sonraki guncellemesinden onceki bekleme suresi
-UPDATE_INTERVAL = 20
+UPDATE_INTERVAL = 600
 # kilit mekanizmasi
 pLock = threading.Lock()
 # log dosyasi icin olusturulan kuyruk
